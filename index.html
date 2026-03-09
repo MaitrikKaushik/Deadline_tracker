@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deadline Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header>
+    <h1>📅 Deadline Tracker</h1>
+    <p>Keep track of your deadlines — add, manage and never miss one again.</p>
+  </header>
+
+  <main class="container">
+
+    <!-- Add Deadline Form -->
+    <section class="card" aria-labelledby="form-heading">
+      <h2 id="form-heading">Add a New Deadline</h2>
+      <form id="deadline-form" novalidate>
+
+        <div class="form-group">
+          <label for="title">Title <span aria-hidden="true">*</span></label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            placeholder="e.g. Submit project report"
+            required
+            maxlength="120"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            placeholder="Any additional notes or details…"
+            rows="3"
+            maxlength="1000"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="due-date">Due Date <span aria-hidden="true">*</span></label>
+          <input
+            type="date"
+            id="due-date"
+            name="due-date"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn-primary">Add Deadline</button>
+      </form>
+    </section>
+
+    <!-- Deadline List -->
+    <section id="deadlines-section" aria-labelledby="list-heading">
+      <h2 id="list-heading">Your Deadlines</h2>
+
+      <!-- Controls -->
+      <div class="controls">
+        <label for="search" class="visually-hidden">Search</label>
+        <input
+          type="text"
+          id="search"
+          placeholder="🔍  Search deadlines…"
+          aria-label="Search deadlines"
+        />
+
+        <label for="filter" class="visually-hidden">Filter</label>
+        <select id="filter" aria-label="Filter deadlines">
+          <option value="all">All</option>
+          <option value="active">Active</option>
+          <option value="due-soon">Due soon (≤ 3 days)</option>
+          <option value="overdue">Overdue</option>
+          <option value="completed">Completed</option>
+        </select>
+
+        <label for="sort" class="visually-hidden">Sort</label>
+        <select id="sort" aria-label="Sort deadlines">
+          <option value="newest">Newest added</option>
+          <option value="date-asc">Due date ↑</option>
+          <option value="date-desc">Due date ↓</option>
+          <option value="title">Title A–Z</option>
+        </select>
+      </div>
+
+      <p id="deadline-count" aria-live="polite"></p>
+      <div id="deadline-list" role="list" aria-label="Deadline items"></div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

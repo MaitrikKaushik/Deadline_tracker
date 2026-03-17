@@ -18,6 +18,10 @@ app.get("/", (req, res) => {
   res.send("API Running");
 });
 
+const taskRoutes = require("./routes/taskroutes");
+
+app.use("/api/tasks", taskRoutes);
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

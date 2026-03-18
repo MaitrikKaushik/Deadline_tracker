@@ -43,5 +43,5 @@ async function deleteTask(id) {
   loadTasks();
 }
 
-// Load tasks on page load
+
 loadTasks();

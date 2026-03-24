@@ -1,0 +1,337 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f0f4f8;
+  color: #333;
+  min-height: 100vh;
+}
+
+header {
+  background: #2d6a4f;
+  color: #fff;
+  padding: 20px 0;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+header h1 {
+  font-size: 2rem;
+  letter-spacing: 1px;
+}
+
+header p {
+  font-size: 0.95rem;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+/* Form Card */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 28px 32px;
+  margin-bottom: 32px;
+}
+
+.card h2 {
+  font-size: 1.25rem;
+  margin-bottom: 20px;
+  color: #2d6a4f;
+  border-bottom: 2px solid #d8f3dc;
+  padding-bottom: 10px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.12);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.btn-primary {
+  background: #2d6a4f;
+  color: #fff;
+  border: none;
+  padding: 11px 28px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #1b4332;
+}
+
+/* Filters & Sort */
+.controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.controls label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.controls select,
+.controls input[type="text"] {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  flex: 1;
+  min-width: 140px;
+}
+
+.controls select:focus,
+.controls input[type="text"]:focus {
+  outline: none;
+  border-color: #2d6a4f;
+}
+
+/* Deadline List */
+#deadlines-section h2 {
+  font-size: 1.25rem;
+  color: #2d6a4f;
+  margin-bottom: 16px;
+}
+
+#deadline-count {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 14px;
+}
+
+.deadline-item {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  padding: 18px 22px;
+  margin-bottom: 16px;
+  border-left: 5px solid #2d6a4f;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  transition: box-shadow 0.2s;
+}
+
+.deadline-item:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.deadline-item.overdue {
+  border-left-color: #e63946;
+}
+
+.deadline-item.due-soon {
+  border-left-color: #f4a261;
+}
+
+.deadline-item.completed {
+  border-left-color: #adb5bd;
+  opacity: 0.65;
+}
+
+.deadline-item.completed .deadline-title {
+  text-decoration: line-through;
+  color: #888;
+}
+
+.deadline-info {
+  flex: 1;
+}
+
+.deadline-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #222;
+}
+
+.deadline-description {
+  font-size: 0.88rem;
+  color: #555;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.deadline-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.deadline-date {
+  font-weight: 600;
+  color: #2d6a4f;
+}
+
+.deadline-item.overdue .deadline-date {
+  color: #e63946;
+}
+
+.deadline-item.due-soon .deadline-date {
+  color: #e07b27;
+}
+
+.deadline-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.badge-overdue {
+  background: #fde0e3;
+  color: #e63946;
+}
+
+.badge-due-soon {
+  background: #fde8d0;
+  color: #e07b27;
+}
+
+.badge-completed {
+  background: #e9ecef;
+  color: #6c757d;
+}
+
+.deadline-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 80px;
+  align-items: flex-end;
+}
+
+.btn-complete,
+.btn-delete {
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-complete {
+  background: #d8f3dc;
+  color: #1b4332;
+}
+
+.btn-complete:hover {
+  background: #b7e4c7;
+}
+
+.btn-complete.undo {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.btn-complete.undo:hover {
+  background: #dee2e6;
+}
+
+.btn-delete {
+  background: #fde0e3;
+  color: #c1121f;
+}
+
+.btn-delete:hover {
+  background: #fbb8bc;
+}
+
+.empty-state {
+  text-align: center;
+  color: #888;
+  padding: 48px 0;
+  font-size: 0.95rem;
+}
+
+.empty-state svg {
+  display: block;
+  margin: 0 auto 16px;
+  opacity: 0.35;
+}
+
+/* Accessibility */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Responsive */
+@media (max-width: 540px) {
+  .card {
+    padding: 20px 16px;
+  }
+
+  .deadline-item {
+    flex-direction: column;
+  }
+
+  .deadline-actions {
+    flex-direction: row;
+    min-width: auto;
+    align-items: center;
+  }
+}

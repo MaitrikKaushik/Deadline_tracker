@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deadline Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📅 Deadline Tracker</h1>
+      <p class="subtitle">Keep all your deadlines in one place</p>
+    </header>
+
+    <section class="add-section">
+      <h2>Add a Deadline</h2>
+      <form id="deadline-form" novalidate>
+        <div class="form-group">
+          <label for="title">Title <span class="required">*</span></label>
+          <input
+            type="text"
+            id="title"
+            placeholder="e.g. Submit project report"
+            maxlength="100"
+            required
+          />
+          <span class="error" id="title-error"></span>
+        </div>
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea
+            id="description"
+            placeholder="Optional notes…"
+            maxlength="300"
+            rows="3"
+          ></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="due-date">Due Date <span class="required">*</span></label>
+            <input type="date" id="due-date" required />
+            <span class="error" id="date-error"></span>
+          </div>
+          <div class="form-group">
+            <label for="priority">Priority</label>
+            <select id="priority">
+              <option value="low">🟢 Low</option>
+              <option value="medium" selected>🟡 Medium</option>
+              <option value="high">🔴 High</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Deadline</button>
+      </form>
+    </section>
+
+    <section class="list-section">
+      <div class="list-header">
+        <h2>Your Deadlines</h2>
+        <div class="controls">
+          <label for="filter" class="sr-only">Filter</label>
+          <select id="filter">
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
+          </select>
+          <label for="sort" class="sr-only">Sort</label>
+          <select id="sort">
+            <option value="date-asc">Date ↑</option>
+            <option value="date-desc">Date ↓</option>
+            <option value="priority">Priority</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="deadline-list" class="deadline-list" aria-live="polite">
+        <p class="empty-state" id="empty-state">No deadlines yet. Add one above!</p>
+      </div>
+
+      <div class="summary" id="summary"></div>
+    </section>
+  </div>
+
+  <template id="deadline-template">
+    <article class="deadline-card">
+      <div class="card-main">
+        <div class="card-left">
+          <button class="complete-btn" aria-label="Mark as complete" title="Toggle complete">
+            <span class="checkmark">✓</span>
+          </button>
+          <div class="card-info">
+            <h3 class="card-title"></h3>
+            <p class="card-description"></p>
+            <div class="card-meta">
+              <span class="due-label"></span>
+              <span class="days-left"></span>
+              <span class="priority-badge"></span>
+            </div>
+          </div>
+        </div>
+        <button class="delete-btn" aria-label="Delete deadline" title="Delete">✕</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    color: #222;
+    padding: 30px;
+  }
+  
+  .container {
+    max-width: 900px;
+    margin: auto;
+  }
+  
+  header {
+    margin-bottom: 30px;
+  }
+  
+  header h1 {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+  
+  header p {
+    color: #666;
+  }
+  
+  
+  /* =========================
+     FORM
+  ========================= */
+  
+  .task-form-section,
+  .tasks-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  
+  .task-form-section h2,
+  .tasks-section h2 {
+    margin-bottom: 20px;
+  }
+  
+  .form-group {
+    margin-bottom: 18px;
+  }
+  
+  .form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 7px;
+  }
+  
+  input,
+  textarea,
+  select {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 15px;
+  }
+  
+  textarea {
+    resize: vertical;
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  button {
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #2563eb;
+    color: white;
+    font-size: 14px;
+  }
+  
+  button:hover {
+    opacity: 0.9;
+  }
+  
+  .secondary-button {
+    background: #6b7280;
+  }
+  
+  .hidden {
+    display: none;
+  }
+  
+  
+  /* =========================
+     TASK HEADER
+  ========================= */
+  
+  .tasks-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  #taskCount {
+    color: #666;
+    font-size: 14px;
+  }
+  
+  
+  /* =========================
+     TASK CARD
+  ========================= */
+  
+  .task-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 18px;
+    margin-bottom: 15px;
+  }
+  
+  .task-card.completed {
+    opacity: 0.7;
+  }
+  
+  .task-card.completed h3 {
+    text-decoration: line-through;
+  }
+  
+  .task-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+  }
+  
+  .task-top h3 {
+    font-size: 19px;
+  }
+  
+  .description {
+    color: #555;
+    margin-bottom: 15px;
+    line-height: 1.5;
+  }
+  
+  
+  /* =========================
+     PRIORITY
+  ========================= */
+  
+  .priority {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  
+  .priority.low {
+    background: #dcfce7;
+    color: #166534;
+  }
+  
+  .priority.medium {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  
+  .priority.high {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  
+  
+  /* =========================
+     TASK INFO
+  ========================= */
+  
+  .task-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    color: #555;
+    font-size: 14px;
+    margin-bottom: 18px;
+  }
+  
+  
+  /* =========================
+     TASK ACTIONS
+  ========================= */
+  
+  .task-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .edit-button {
+    background: #f59e0b;
+  }
+  
+  .delete-button {
+    background: #dc2626;
+  }
+  
+  
+  /* =========================
+     MESSAGES
+  ========================= */
+  
+  #formMessage {
+    margin-top: 12px;
+    font-size: 14px;
+  }
+  
+  #formMessage.success {
+    color: #15803d;
+  }
+  
+  #formMessage.error,
+  .error-message {
+    color: #dc2626;
+  }
+  
+  #emptyMessage {
+    color: #777;
+    text-align: center;
+    padding: 30px;
+  }
+  
+  
+  /* =========================
+     MOBILE
+  ========================= */
+  
+  @media (max-width: 650px) {
+  
+    body {
+      padding: 15px;
+    }
+  
+    .form-row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  
+    .task-top {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  
+    .task-info {
+      flex-direction: column;
+      gap: 8px;
+    }
+  
+  }

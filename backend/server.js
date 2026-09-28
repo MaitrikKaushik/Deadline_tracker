@@ -2,12 +2,20 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db");
+const cookieParser = require("cookie-parser");
 
 dotenv.config();
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  })
+);
+
+app.use(cookieParser());
 console.log(process.env.MONGO_URI);
 
 // connect database

@@ -620,6 +620,42 @@ button {
   text-decoration: underline;
 }
 
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #fff9ed;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 48px 40px;
+  text-align: center;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 18px 50px rgba(143, 17, 17, 0.12);
+}
+
+.login-card h1 {
+  margin: 8px 0 12px;
+  color: #8f1111;
+  font-size: 32px;
+}
+
+.login-subtitle {
+  margin: 0 auto 32px;
+  max-width: 300px;
+  color: #765f57;
+  line-height: 1.6;
+}
+
+.google-login {
+  display: flex;
+  justify-content: center;
+}
 /* =========================
    RESPONSIVE
 ========================= */

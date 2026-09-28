@@ -1,4 +1,26 @@
+# Dependencies
 node_modules/
+
+# Environment variables / secrets
 .env
+.env.*
+!.env.example
+
+# Backend environment
 backend/.env
+backend/.env.*
+
+# Frontend environment
 frontend-react/.env
+frontend-react/.env.*
+
+# Build files
+dist/
+build/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -31,6 +31,23 @@ const taskSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    deadlineType: {
+        type: String,
+        enum: [
+          "work",
+          "exam",
+          "general",
+          "assignment",
+          "self-study",
+        ],
+        default: "general",
+      },
+      
+      referenceLink: {
+        type: String,
+        trim: true,
+        default: "",
+      },
 });
 
 module.exports = mongoose.model("Task", taskSchema);

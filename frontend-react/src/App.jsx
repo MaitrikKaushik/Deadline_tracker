@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import TaskForm from "./components/TaskForm";
+import TaskList from "./components/TaskList";
+import "./App.css";
 
 const API_URL = "http://localhost:5000/api/tasks";
 
@@ -11,13 +14,12 @@ function App() {
     description: "",
     deadline: "",
     priority: "medium",
+    deadlineType: "general",
+    referenceLink: "",
   });
 
   const [editingId, setEditingId] = useState(null);
 
-  // =========================
-  // READ - GET ALL TASKS
-  // =========================
   const fetchTasks = async () => {
     try {
       setLoading(true);
@@ -29,7 +31,6 @@ function App() {
       }
 
       const data = await response.json();
-
       setTasks(data);
     } catch (error) {
       console.error("Error fetching tasks:", error);
@@ -42,9 +43,6 @@ function App() {
     fetchTasks();
   }, []);
 
-  // =========================
-  // HANDLE INPUT
-  // =========================
   const handleChange = (event) => {
     setFormData({
       ...formData,
@@ -52,9 +50,6 @@ function App() {
     });
   };
 
-  // =========================
-  // CREATE / UPDATE
-  // =========================
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -62,7 +57,6 @@ function App() {
       let response;
 
       if (editingId) {
-        // UPDATE
         response = await fetch(`${API_URL}/${editingId}`, {
           method: "PUT",
           headers: {
@@ -71,7 +65,6 @@ function App() {
           body: JSON.stringify(formData),
         });
       } else {
-        // CREATE
         response = await fetch(API_URL, {
           method: "POST",
           headers: {
@@ -88,27 +81,36 @@ function App() {
       const data = await response.json();
 
       if (editingId) {
-        // Replace updated task
         setTasks(
           tasks.map((task) =>
             task._id === editingId ? data : task
           )
         );
       } else {
-        // Add new task
         setTasks([...tasks, data]);
       }
 
       resetForm();
-
     } catch (error) {
       console.error("Error saving task:", error);
     }
   };
 
-  // =========================
-  // DELETE
-  // =========================
+  const handleEdit = (task) => {
+    setEditingId(task._id);
+  
+    setFormData({
+      title: task.title,
+      description: task.description || "",
+      deadline: task.deadline
+        ? task.deadline.substring(0, 10)
+        : "",
+      priority: task.priority,
+      deadlineType: task.deadlineType || "general",
+      referenceLink: task.referenceLink || "",
+    });
+  };
+
   const handleDelete = async (id) => {
     try {
       const response = await fetch(`${API_URL}/${id}`, {
@@ -119,34 +121,12 @@ function App() {
         throw new Error("Failed to delete task");
       }
 
-      setTasks(
-        tasks.filter((task) => task._id !== id)
-      );
-
+      setTasks(tasks.filter((task) => task._id !== id));
     } catch (error) {
       console.error("Error deleting task:", error);
     }
   };
 
-  // =========================
-  // EDIT
-  // =========================
-  const handleEdit = (task) => {
-    setEditingId(task._id);
-
-    setFormData({
-      title: task.title,
-      description: task.description || "",
-      deadline: task.deadline
-        ? task.deadline.substring(0, 10)
-        : "",
-      priority: task.priority,
-    });
-  };
-
-  // =========================
-  // MARK COMPLETED / PENDING
-  // =========================
   const toggleStatus = async (task) => {
     try {
       const newStatus =
@@ -173,161 +153,72 @@ function App() {
 
       setTasks(
         tasks.map((item) =>
-          item._id === task._id
-            ? updatedTask
-            : item
+          item._id === task._id ? updatedTask : item
         )
       );
-
     } catch (error) {
       console.error("Error updating status:", error);
     }
   };
 
-  // =========================
-  // RESET FORM
-  // =========================
   const resetForm = () => {
     setFormData({
       title: "",
       description: "",
       deadline: "",
       priority: "medium",
+      deadlineType: "general",
+      referenceLink: "",
     });
-
+  
     setEditingId(null);
   };
 
   return (
-    <div>
-      <h1>Deadline Tracker</h1>
-
-      {/* =========================
-          CREATE / UPDATE FORM
-      ========================== */}
-
-      <h2>
-        {editingId ? "Edit Task" : "Add Task"}
-      </h2>
-
-      <form onSubmit={handleSubmit}>
-
-        <input
-          type="text"
-          name="title"
-          placeholder="Task title"
-          value={formData.title}
-          onChange={handleChange}
-          required
-        />
-
-        <br /><br />
-
-        <textarea
-          name="description"
-          placeholder="Description"
-          value={formData.description}
-          onChange={handleChange}
-        />
-
-        <br /><br />
-
-        <input
-          type="date"
-          name="deadline"
-          value={formData.deadline}
-          onChange={handleChange}
-          required
-        />
-
-        <br /><br />
-
-        <select
-          name="priority"
-          value={formData.priority}
-          onChange={handleChange}
-        >
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-
-        <br /><br />
-
-        <button type="submit">
-          {editingId ? "Update Task" : "Add Task"}
-        </button>
-
-        {editingId && (
-          <button
-            type="button"
-            onClick={resetForm}
-          >
-            Cancel
-          </button>
-        )}
-
-      </form>
-
-      <hr />
-
-      {/* =========================
-          TASK LIST
-      ========================== */}
-
-      <h2>Tasks</h2>
-
-      {loading && <p>Loading tasks...</p>}
-
-      {!loading && tasks.length === 0 && (
-        <p>No tasks found.</p>
-      )}
-
-      {tasks.map((task) => (
-        <div key={task._id}>
-
-          <h3>{task.title}</h3>
-
-          <p>
-            {task.description}
+    <div className="app">
+      <header className="header">
+        <div>
+          <p className="eyebrow">PRODUCTIVITY</p>
+          <h1>Deadline Tracker</h1>
+          <p className="subtitle">
+            Keep your academic work organized and on time.
           </p>
-
-          <p>
-            Deadline: {task.deadline}
-          </p>
-
-          <p>
-            Priority: {task.priority}
-          </p>
-
-          <p>
-            Status: {task.status}
-          </p>
-
-          <button
-            onClick={() => toggleStatus(task)}
-          >
-            {task.status === "completed"
-              ? "Mark Pending"
-              : "Mark Completed"}
-          </button>
-
-          <button
-            onClick={() => handleEdit(task)}
-          >
-            Edit
-          </button>
-
-          <button
-            onClick={() => handleDelete(task._id)}
-          >
-            Delete
-          </button>
-
-          <hr />
-
         </div>
-      ))}
+
+        <div className="task-count">
+          <span>{tasks.length}</span>
+          <small>Total Tasks</small>
+        </div>
+      </header>
+
+      <main className="main-content">
+        <section className="form-section">
+          <TaskForm
+            formData={formData}
+            editingId={editingId}
+            onChange={handleChange}
+            onSubmit={handleSubmit}
+            onCancel={resetForm}
+          />
+        </section>
+
+        <section className="tasks-section">
+          <div className="section-heading">
+            <div>
+              <h2>Your Tasks</h2>
+              <p>Manage your upcoming deadlines.</p>
+            </div>
+          </div>
+
+          <TaskList
+            tasks={tasks}
+            loading={loading}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onToggleStatus={toggleStatus}
+          />
+        </section>
+      </main>
     </div>
   );
 }

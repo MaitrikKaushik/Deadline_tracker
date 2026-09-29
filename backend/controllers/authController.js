@@ -72,7 +72,7 @@ exports.googleLogin = async (req, res) => {
       },
       process.env.JWT_SECRET,
       {
-        expiresIn: "7d",
+        expiresIn: "30d",
       }
     );
 
@@ -87,7 +87,7 @@ exports.googleLogin = async (req, res) => {
           ? "none"
           : "lax",
 
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
     res.json({

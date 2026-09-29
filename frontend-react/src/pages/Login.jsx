@@ -1,14 +1,10 @@
 import { useEffect } from "react";
 
 function Login() {
-    useEffect(() => {
-        console.log("Google object:", window.google);
-        console.log(
-          "Google Client ID:",
-          import.meta.env.VITE_GOOGLE_CLIENT_ID
-        );
-      
-        const initializeGoogle = () => {
+  useEffect(() => {
+    let interval;
+
+    const initializeGoogle = () => {
       if (!window.google) {
         return false;
       }
@@ -17,12 +13,16 @@ function Login() {
         document.getElementById("google-login-button");
 
       if (!buttonContainer) {
-        return true;
+        return false;
       }
+
+      console.log("Initializing Google Identity Services...");
 
       window.google.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-
+      
+        use_fedcm_for_button: true,
+      
         callback: async (response) => {
           try {
             const result = await fetch(
@@ -67,25 +67,30 @@ function Login() {
           text: "continue_with",
           shape: "rectangular",
           width: 300,
+      
+          
         }
       );
 
       return true;
     };
 
-    // Google script may load after React.
+    // Try immediately
     if (initializeGoogle()) {
       return;
     }
 
-    const interval = setInterval(() => {
+    // Google script may not have loaded yet
+    interval = setInterval(() => {
       if (initializeGoogle()) {
         clearInterval(interval);
       }
     }, 100);
 
     return () => {
-      clearInterval(interval);
+      if (interval) {
+        clearInterval(interval);
+      }
     };
   }, []);
 

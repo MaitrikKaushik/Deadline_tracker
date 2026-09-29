@@ -15,14 +15,12 @@ app.use(
   })
 );
 
-app.use(cookieParser());
-console.log(process.env.MONGO_URI);
-
-// connect database
-connectDB();
-
 // middleware
 app.use(express.json());
+app.use(cookieParser());
+connectDB();
+
+
 
 // test route
 app.get("/", (req, res) => {
@@ -30,7 +28,9 @@ app.get("/", (req, res) => {
 });
 
 const taskRoutes = require("./routes/taskroutes");
+const authRoutes = require("./routes/authRoutes");
 
+app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 
 const PORT = process.env.PORT || 5000;

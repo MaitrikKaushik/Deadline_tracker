@@ -52,8 +52,6 @@ exports.getTaskById = async (req, res) => {
     });
   }
 };
-
-// UPDATE TASK
 exports.updateTask = async (req, res) => {
   try {
     const task = await Task.findOneAndUpdate(

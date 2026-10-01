@@ -15,6 +15,11 @@ const taskSchema = new mongoose.Schema({
         required: true,
     },
 
+    reminderEnabled: {
+        type: Boolean,
+        default: false,
+    },
+
     priority: {
         type: String,
         enum: ["low", "medium", "high"],
@@ -31,29 +36,30 @@ const taskSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+
     deadlineType: {
         type: String,
         enum: [
-          "work",
-          "exam",
-          "general",
-          "assignment",
-          "self-study",
+            "work",
+            "exam",
+            "general",
+            "assignment",
+            "self-study",
         ],
         default: "general",
-      },
-      
-      referenceLink: {
+    },
+
+    referenceLink: {
         type: String,
         trim: true,
         default: "",
-      },
+    },
 
-      userId: {
+    userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true,
-      },
+    },
 });
 
 module.exports = mongoose.model("Task", taskSchema);

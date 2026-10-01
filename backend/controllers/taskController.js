@@ -1,8 +1,43 @@
 const Task = require("../models/task");
 
+const validateDeadline = (deadline) => {
+  const deadlineDate = new Date(deadline);
+
+  if (Number.isNaN(deadlineDate.getTime())) {
+    return "Invalid deadline";
+  }
+
+  const today = new Date();
+
+  today.setHours(0, 0, 0, 0);
+  deadlineDate.setHours(0, 0, 0, 0);
+
+  const maximumDeadline = new Date(today);
+
+  maximumDeadline.setDate(
+    maximumDeadline.getDate() + 366
+  );
+
+  if (deadlineDate > maximumDeadline) {
+    return "Deadline cannot be more than 366 days from today";
+  }
+
+  return null;
+};
+
 // CREATE TASK
 exports.createTask = async (req, res) => {
   try {
+    const deadlineError = validateDeadline(
+      req.body.deadline
+    );
+
+    if (deadlineError) {
+      return res.status(400).json({
+        message: deadlineError,
+      });
+    }
+
     const task = await Task.create({
       ...req.body,
       userId: req.user._id,
@@ -56,6 +91,18 @@ exports.getTaskById = async (req, res) => {
 // UPDATE TASK
 exports.updateTask = async (req, res) => {
   try {
+    if (req.body.deadline !== undefined) {
+      const deadlineError = validateDeadline(
+        req.body.deadline
+      );
+
+      if (deadlineError) {
+        return res.status(400).json({
+          message: deadlineError,
+        });
+      }
+    }
+
     const task = await Task.findOneAndUpdate(
       {
         _id: req.params.id,

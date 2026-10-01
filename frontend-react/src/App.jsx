@@ -15,6 +15,7 @@ const initialFormData = {
   priority: "medium",
   deadlineType: "general",
   referenceLink: "",
+  reminderEnabled: true,
 };
 
 function App() {
@@ -97,12 +98,12 @@ function App() {
     }
   };
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-
-    setFormData((previous) => ({
-      ...previous,
-      [name]: value,
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+  
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -171,12 +172,16 @@ function App() {
         task.deadlineType || "general",
       referenceLink:
         task.referenceLink || "",
+        reminderEnabled:
+        task.reminderEnabled || false,  
     });
 
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
+
+    
   };
 
   const handleCancel = () => {

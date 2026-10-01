@@ -5,6 +5,21 @@ function TaskForm({
   onSubmit,
   onCancel,
 }) {
+  const today = new Date();
+
+  const maximumDeadline = new Date(today);
+  maximumDeadline.setDate(maximumDeadline.getDate() + 366);
+
+  const formatDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const maxDeadline = formatDate(maximumDeadline);
+
   return (
     <div className="form-card">
       <div className="form-header">
@@ -57,6 +72,7 @@ function TaskForm({
               name="deadline"
               value={formData.deadline}
               onChange={onChange}
+              max={maxDeadline}
               required
             />
           </div>
@@ -109,6 +125,48 @@ function TaskForm({
 
           <small className="input-hint">
             Optional — add a resource you'll need to complete this task.
+          </small>
+        </div>
+
+        {/* Email Reminder */}
+        <div className="form-group">
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              width: "fit-content",
+              marginBottom: "7px",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              name="reminderEnabled"
+              checked={Boolean(formData.reminderEnabled)}
+              onChange={onChange}
+              style={{
+                width: "16px",
+                height: "16px",
+                margin: "0",
+                padding: "0",
+                flex: "0 0 16px",
+                cursor: "pointer",
+              }}
+            />
+
+            <span
+              style={{
+                margin: "0",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Send me email reminders
+            </span>
+          </label>
+
+          <small className="input-hint">
+            Receive reminders as the deadline approaches.
           </small>
         </div>
 

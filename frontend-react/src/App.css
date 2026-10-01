@@ -681,6 +681,26 @@ button {
   background: #c62828;
   transform: translateY(-1px);
 }
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.checkbox-label span {
+  margin: 0;
+}
 /* =========================
    RESPONSIVE
 ========================= */

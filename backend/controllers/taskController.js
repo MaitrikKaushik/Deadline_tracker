@@ -1,4 +1,5 @@
 const Task = require("../models/task");
+const ReminderDelivery = require("../models/reminderDelivery");
 
 const validateDeadline = (deadline) => {
   const deadlineDate = new Date(deadline);
@@ -120,6 +121,13 @@ exports.updateTask = async (req, res) => {
       });
     }
 
+    await ReminderDelivery.deleteMany({
+      taskId: task._id,
+      status: {
+        $ne: "sent",
+      },
+    });
+
     res.json(task);
   } catch (error) {
     res.status(500).json({
@@ -141,6 +149,13 @@ exports.deleteTask = async (req, res) => {
         message: "Task not found",
       });
     }
+
+    await ReminderDelivery.deleteMany({
+      taskId: task._id,
+      status: {
+        $ne: "sent",
+      },
+    });
 
     res.json({
       message: "Task deleted",

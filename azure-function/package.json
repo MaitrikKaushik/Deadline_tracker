@@ -1,0 +1,19 @@
+{
+  "name": "",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/functions/*.js",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests yet...\""
+  },
+  "dependencies": {
+    "@azure/communication-email": "^1.1.0",
+    "@azure/functions": "^4.0.0",
+    "dotenv": "^18.0.5",
+    "mongoose": "^9.10.4"
+  },
+  "devDependencies": {
+    "azurite": "^3.37.0"
+  }
+}

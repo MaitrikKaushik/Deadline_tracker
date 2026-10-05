@@ -1,11 +1,13 @@
-const connectDB = require("../../../backend/config/db");
+const connectDB = require("../config/db");
+
+const {
+  runReminderCycle,
+} = require("../services/reminderOrchestrator");
+
 require("dotenv").config();
 
 const { app } = require("@azure/functions");
 
-const {
-  runReminderCycle,
-} = require("../../../backend/services/reminderOrchestrator");
 
 app.timer("ReminderTimer", {
     schedule: "0 0 6 * * *",

@@ -743,3 +743,31 @@ button {
     flex-direction: column;
   }
 }
+
+.task-sort {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.task-sort label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b463c;
+}
+
+.task-sort select {
+  padding: 9px 12px;
+  border: 1px solid #e6c783;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4a1c12;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.task-sort select:focus {
+  outline: none;
+  border-color: #c62828;
+}

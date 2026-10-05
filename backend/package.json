@@ -9,7 +9,8 @@
   "scripts": {
     "test": "jest",
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test:email": "jest --runInBand --runTestsByPath tests/emailSend.test.js"
   },
   "keywords": [],
   "dependencies": {
@@ -33,6 +34,7 @@
   "jest": {
     "setupFilesAfterEnv": [
       "<rootDir>/tests/setup.js"
-    ]
+    ],
+    "maxWorkers": 1
   }
 }

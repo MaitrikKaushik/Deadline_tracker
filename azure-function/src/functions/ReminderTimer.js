@@ -10,7 +10,7 @@ const { app } = require("@azure/functions");
 
 
 app.timer("ReminderTimer", {
-    schedule: "0 0 6 * * *",
+    schedule: "0 30 0 * * *",
 
     handler: async (myTimer, context) => {
         context.log(

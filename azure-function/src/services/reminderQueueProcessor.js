@@ -1,4 +1,5 @@
 const ReminderDelivery = require("../models/reminderDelivery");
+require("../models/user");
 
 const {
   processReminderDelivery,

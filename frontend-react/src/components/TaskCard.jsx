@@ -59,12 +59,18 @@ function TaskCard({
 
         {/* Metadata */}
         <div className="task-meta">
-          <span>
-            Deadline:{" "}
-            {new Date(
-              task.deadline
-            ).toLocaleDateString()}
-          </span>
+        <span>
+          Deadline:{" "}
+          {new Date(task.deadline).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}{" "}
+          —{" "}
+          {new Date(task.deadline).toLocaleDateString("en-GB", {
+            weekday: "long",
+          })}
+        </span>
 
           <span
             className={`status ${

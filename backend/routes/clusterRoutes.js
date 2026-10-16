@@ -10,6 +10,7 @@ const {
 } = require("../controllers/clusterController");
 
 const protect = require("../middleware/authMiddleware");
+const { createBroadcastFromCluster } = require("../controllers/broadcastController");
 
 const router = express.Router();
 
@@ -17,6 +18,7 @@ const router = express.Router();
 router.use(protect);
 
 router.post("/", createCluster);
+router.post("/:id/broadcast", createBroadcastFromCluster);
 router.get("/", getClusters);
 router.get("/:id", getClusterById);
 router.put("/:id", updateCluster);

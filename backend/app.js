@@ -24,9 +24,11 @@ app.get("/", (req, res) => {
 const taskRoutes = require("./routes/taskroutes");
 const authRoutes = require("./routes/authRoutes");
 const clusterRoutes = require("./routes/clusterRoutes");
+const broadcastRoutes = require("./routes/broadcastRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/clusters", clusterRoutes);
+app.use("/api/broadcasts", broadcastRoutes);
 
 module.exports = app;

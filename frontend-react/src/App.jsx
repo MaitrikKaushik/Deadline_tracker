@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import Login from "./pages/Login";
+import Clusters from "./pages/Clusters";
+import CreateCluster from "./pages/CreateCluster";
+import ClusterDetails from "./pages/ClusterDetails";
+import Navbar from "./components/Navbar";
 import TaskForm from "./components/TaskForm";
 import TaskList from "./components/TaskList";
+import useHashRoute from "./hooks/useHashRoute";
 
 import "./App.css";
 
@@ -31,6 +36,25 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   const [tasksLoading, setTasksLoading] = useState(false);
+
+  const route = useHashRoute();
+
+  const [notice, setNotice] = useState(null);
+
+  const notify = useCallback((message) => {
+    setNotice({ id: Date.now(), message });
+  }, []);
+
+  // Auto-dismiss success messages after a few seconds.
+  useEffect(() => {
+    if (!notice) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => setNotice(null), 6000);
+
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -267,6 +291,14 @@ function App() {
     }
   };
 
+  // Called by the cluster pages when the API answers 401. Same outcome as
+  // a failed authentication check: back to the login screen.
+  const handleSessionExpired = useCallback(() => {
+    setUser(null);
+    setTasks([]);
+    setNotice(null);
+  }, []);
+
   const handleLogout = async () => {
     try {
       const response = await fetch(
@@ -341,33 +373,81 @@ function App() {
         </button>
       </header>
 
-      <main className="main-content">
-        <TaskForm
-          formData={formData}
-          editingId={editingId}
-          onChange={handleChange}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-        />
+      <Navbar route={route} />
 
-        <section>
-          <div className="section-heading">
-            <h2>Your Tasks</h2>
+      {notice && (
+        <div className="notice-banner" role="status">
+          <span>{notice.message}</span>
 
-            <p>
-              {user.email}
-            </p>
-          </div>
+          <button
+            type="button"
+            aria-label="Dismiss message"
+            onClick={() => setNotice(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
-          <TaskList
-            tasks={tasks}
-            loading={tasksLoading}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onToggleStatus={handleToggleStatus}
+      {route.name === "tasks" && (
+        <main className="main-content">
+          <TaskForm
+            formData={formData}
+            editingId={editingId}
+            onChange={handleChange}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
           />
-        </section>
-      </main>
+
+          <section>
+            <div className="section-heading">
+              <h2>Your Tasks</h2>
+
+              <p>
+                {user.email}
+              </p>
+            </div>
+
+            <TaskList
+              tasks={tasks}
+              loading={tasksLoading}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onToggleStatus={handleToggleStatus}
+            />
+          </section>
+        </main>
+      )}
+
+      {route.name === "clusters" && (
+        <main className="cluster-content">
+          <Clusters
+            onNotify={notify}
+            onSessionExpired={handleSessionExpired}
+          />
+        </main>
+      )}
+
+      {route.name === "cluster-new" && (
+        <main className="cluster-content">
+          <CreateCluster
+            onNotify={notify}
+            onSessionExpired={handleSessionExpired}
+            onTasksChanged={fetchTasks}
+          />
+        </main>
+      )}
+
+      {route.name === "cluster-detail" && (
+        <main className="cluster-content">
+          <ClusterDetails
+            key={route.id}
+            clusterId={route.id}
+            onNotify={notify}
+            onSessionExpired={handleSessionExpired}
+          />
+        </main>
+      )}
     </div>
   );
 }

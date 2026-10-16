@@ -3,6 +3,7 @@ function TaskCard({
   onEdit,
   onDelete,
   onToggleStatus,
+  readOnly = false,
 }) {
   const isCompleted = task.status === "completed";
 
@@ -86,31 +87,33 @@ function TaskCard({
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="task-actions">
-        <button
-          className="complete-btn"
-          onClick={() => onToggleStatus(task)}
-        >
-          {isCompleted
-            ? "Mark Pending"
-            : "Complete"}
-        </button>
+      {/* Actions (hidden for read-only views such as imported clusters) */}
+      {!readOnly && (
+        <div className="task-actions">
+          <button
+            className="complete-btn"
+            onClick={() => onToggleStatus(task)}
+          >
+            {isCompleted
+              ? "Mark Pending"
+              : "Complete"}
+          </button>
 
-        <button
-          className="edit-btn"
-          onClick={() => onEdit(task)}
-        >
-          Edit
-        </button>
+          <button
+            className="edit-btn"
+            onClick={() => onEdit(task)}
+          >
+            Edit
+          </button>
 
-        <button
-          className="delete-btn"
-          onClick={() => onDelete(task._id)}
-        >
-          Delete
-        </button>
-      </div>
+          <button
+            className="delete-btn"
+            onClick={() => onDelete(task._id)}
+          >
+            Delete
+          </button>
+        </div>
+      )}
     </article>
   );
 }

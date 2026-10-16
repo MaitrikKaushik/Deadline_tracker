@@ -4,98 +4,131 @@ const mongoose = require("mongoose");
 const Cluster = require("../models/cluster");
 const Task = require("../models/task");
 
+// Validate MongoDB ObjectIds strictly.
+const isValidObjectId = (id) => {
+  return (
+    typeof id === "string" &&
+    /^[a-fA-F0-9]{24}$/.test(id)
+  );
+};
+
+// Validate and normalize cluster names.
+const validateClusterName = (name) => {
+  if (typeof name !== "string" || !name.trim()) {
+    return {
+      error: "Cluster name must be a non-empty string",
+    };
+  }
+
+  const trimmedName = name.trim();
+
+  if (trimmedName.length > 100) {
+    return {
+      error: "Cluster name cannot exceed 100 characters",
+    };
+  }
+
+  return { value: trimmedName };
+};
+
+// Validate task IDs and remove duplicates.
+const validateTaskIds = (taskIds) => {
+  if (!Array.isArray(taskIds)) {
+    return {
+      error: "taskIds must be an array",
+    };
+  }
+
+  if (
+    taskIds.some(
+      (id) =>
+        typeof id !== "string" || !isValidObjectId(id)
+    )
+  ) {
+    return {
+      error: "Invalid task ID",
+    };
+  }
+
+  return {
+    value: [...new Set(taskIds.map((id) => id.toLowerCase()))],
+  };
+};
+
+// Ensure all referenced tasks belong to the authenticated user.
+const verifyTaskOwnership = async (taskIds, userId) => {
+  const ownedTasks = await Task.find({
+    _id: { $in: taskIds },
+    userId,
+  }).select("_id");
+
+  return ownedTasks.length === taskIds.length;
+};
+
 // CREATE CLUSTER
 exports.createCluster = async (req, res) => {
   try {
-    const { name, taskIds = [] } = req.body;
+    const body = req.body || {};
+    const { name, taskIds = [] } = body;
 
-    if (!name || !name.trim()) {
+    const nameResult = validateClusterName(name);
+
+    if (nameResult.error) {
       return res.status(400).json({
-        message: "Cluster name is required",
+        message: nameResult.error,
       });
     }
 
-    if (!Array.isArray(taskIds)) {
+    const taskResult = validateTaskIds(taskIds);
+
+    if (taskResult.error) {
       return res.status(400).json({
-        message: "taskIds must be an array",
+        message: taskResult.error,
       });
     }
 
-    if (
-      taskIds.some(
-        (id) => !mongoose.isValidObjectId(id)
-      )
-    ) {
-      return res.status(400).json({
-        message: "Invalid task ID",
-      });
-    }
+    const uniqueTaskIds = taskResult.value;
 
-    const uniqueTaskIds = [
-      ...new Set(taskIds.map(String)),
-    ];
+    const ownsTasks = await verifyTaskOwnership(
+      uniqueTaskIds,
+      req.user._id
+    );
 
-    const ownedTasks = await Task.find({
-      _id: { $in: uniqueTaskIds },
-      userId: req.user._id,
-    }).select("_id");
-
-    if (ownedTasks.length !== uniqueTaskIds.length) {
+    if (!ownsTasks) {
       return res.status(403).json({
-        message:
-          "One or more tasks do not belong to you",
+        message: "One or more tasks do not belong to you",
       });
     }
 
     const cluster = await Cluster.create({
-      name: name.trim(),
+      name: nameResult.value,
       ownerId: req.user._id,
       tasks: uniqueTaskIds,
       origin: "created",
     });
 
-    res.status(201).json(cluster);
+    return res.status(201).json(cluster);
   } catch (error) {
     if (error.name === "ValidationError") {
       return res.status(400).json({
-        message: error.message,
+        message: "Invalid cluster data",
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to create cluster",
     });
   }
 };
 
-// GET ALL CLUSTERS
-exports.getClusters = async (req, res) => {
-  try {
-    const clusters = await Cluster.find({
-      ownerId: req.user._id,
-    })
-      .populate("tasks")
-      .sort({ createdAt: -1 });
-
-    res.json(clusters);
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to fetch clusters",
-    });
-  }
-};
-
-// GET SINGLE CLUSTER
-
- // GET CLUSTERS WITH FILTERING
+// GET CLUSTERS WITH FILTERING
 exports.getClusters = async (req, res) => {
   try {
     const { type = "all" } = req.query;
 
     if (!["mine", "imported", "all"].includes(type)) {
       return res.status(400).json({
-        message:
-          "Invalid cluster type. Use mine, imported, or all.",
+        message: "Invalid cluster type. Use mine, imported, or all.",
       });
     }
 
@@ -113,22 +146,52 @@ exports.getClusters = async (req, res) => {
       .populate("tasks")
       .sort({ createdAt: -1 });
 
-    res.json(clusters);
+    return res.json(clusters);
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to fetch clusters",
     });
   }
 };
 
+// GET SINGLE CLUSTER
+exports.getClusterById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        message: "Invalid cluster ID",
+      });
+    }
+
+    const cluster = await Cluster.findOne({
+      _id: id,
+      ownerId: req.user._id,
+    }).populate("tasks");
+
+    if (!cluster) {
+      return res.status(404).json({
+        message: "Cluster not found",
+      });
+    }
+
+    return res.json(cluster);
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to fetch cluster",
+    });
+  }
+};
 
 // UPDATE CLUSTER
 exports.updateCluster = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, taskIds } = req.body;
+    const body = req.body || {};
+    const { name, taskIds } = body;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidObjectId(id)) {
       return res.status(400).json({
         message: "Invalid cluster ID",
       });
@@ -153,58 +216,36 @@ exports.updateCluster = async (req, res) => {
     }
 
     if (name !== undefined) {
-      if (
-        typeof name !== "string" ||
-        !name.trim()
-      ) {
+      const nameResult = validateClusterName(name);
+
+      if (nameResult.error) {
         return res.status(400).json({
-          message: "Cluster name cannot be empty",
+          message: nameResult.error,
         });
       }
 
-      if (name.trim().length > 100) {
-        return res.status(400).json({
-          message:
-            "Cluster name cannot exceed 100 characters",
-        });
-      }
-
-      cluster.name = name.trim();
+      cluster.name = nameResult.value;
     }
 
     if (taskIds !== undefined) {
-      if (!Array.isArray(taskIds)) {
+      const taskResult = validateTaskIds(taskIds);
+
+      if (taskResult.error) {
         return res.status(400).json({
-          message: "taskIds must be an array",
+          message: taskResult.error,
         });
       }
 
-      if (
-        taskIds.some(
-          (taskId) =>
-            !mongoose.isValidObjectId(taskId)
-        )
-      ) {
-        return res.status(400).json({
-          message: "Invalid task ID",
-        });
-      }
+      const uniqueTaskIds = taskResult.value;
 
-      const uniqueTaskIds = [
-        ...new Set(taskIds.map(String)),
-      ];
+      const ownsTasks = await verifyTaskOwnership(
+        uniqueTaskIds,
+        req.user._id
+      );
 
-      const ownedTasks = await Task.find({
-        _id: { $in: uniqueTaskIds },
-        userId: req.user._id,
-      }).select("_id");
-
-      if (
-        ownedTasks.length !== uniqueTaskIds.length
-      ) {
+      if (!ownsTasks) {
         return res.status(403).json({
-          message:
-            "One or more tasks do not belong to you",
+          message: "One or more tasks do not belong to you",
         });
       }
 
@@ -212,18 +253,17 @@ exports.updateCluster = async (req, res) => {
     }
 
     await cluster.save();
-
     await cluster.populate("tasks");
 
-    res.json(cluster);
+    return res.json(cluster);
   } catch (error) {
     if (error.name === "ValidationError") {
       return res.status(400).json({
-        message: error.message,
+        message: "Invalid cluster data",
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to update cluster",
     });
   }
@@ -234,7 +274,7 @@ exports.deleteCluster = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidObjectId(id)) {
       return res.status(400).json({
         message: "Invalid cluster ID",
       });
@@ -253,12 +293,12 @@ exports.deleteCluster = async (req, res) => {
       });
     }
 
-    // Deleting a cluster does not delete its tasks.
-    res.json({
+    // Deleting a cluster never deletes its associated tasks.
+    return res.json({
       message: "Cluster deleted successfully",
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to delete cluster",
     });
   }

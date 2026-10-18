@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const Cluster = require("../models/cluster");
 const Task = require("../models/task");
+const Broadcast = require("../models/broadcast");
+const BroadcastImport = require("../models/broadcastImport");
+const ManagedUpdate = require("../models/managedUpdate");
+const ReminderDelivery = require("../models/reminderDelivery");
+const { recordClusterNameChange } = require("../services/managedUpdateService");
 
 const MAX_NAME_LENGTH = 100;
 const VALID_TYPES = ["mine", "imported", "all"];
@@ -186,6 +191,8 @@ exports.updateCluster = async (req, res) => {
       });
     }
 
+    const previousName = cluster.name;
+
     if (name !== undefined) {
       const nameResult = validateName(name);
 
@@ -209,41 +216,147 @@ exports.updateCluster = async (req, res) => {
     }
 
     await cluster.save();
-    await cluster.populate("tasks");
 
-    res.json(cluster);
+    let managedUpdateWarning;
+    if (previousName !== cluster.name) {
+      try {
+        await recordClusterNameChange({
+          ownerId: req.user._id,
+          sourceClusterId: cluster._id,
+          newName: cluster.name,
+        });
+      } catch (syncError) {
+        console.error("Managed cluster update preparation failed:", syncError);
+        managedUpdateWarning = "The cluster was saved, but shared update proposals could not all be prepared.";
+      }
+    }
+
+    await cluster.populate("tasks");
+    const result = cluster.toObject();
+    if (managedUpdateWarning) result.managedUpdateWarning = managedUpdateWarning;
+    res.json(result);
   } catch (error) {
     handleError(res, error, "Failed to update cluster");
   }
 };
 
-// DELETE CLUSTER
+// DELETE CLUSTER. Imported copies are preserved by default; deleting them is
+// an explicit, authenticated choice made by the source owner.
 exports.deleteCluster = async (req, res) => {
   try {
     const { id } = req.params;
+    const { removeImportedCopies = false } = req.body || {};
 
-    if (!isObjectIdString(id)) {
-      return res.status(400).json({ message: "Invalid cluster ID" });
+    if (!isObjectIdString(id)) return res.status(400).json({ message: "Invalid cluster ID" });
+    if (typeof removeImportedCopies !== "boolean") {
+      return res.status(400).json({ message: "removeImportedCopies must be a boolean" });
     }
 
-    const cluster = await Cluster.findOneAndDelete({
+    const cluster = await Cluster.findOne({
       _id: id,
       ownerId: req.user._id,
       origin: "created",
     });
-
     if (!cluster) {
-      return res.status(404).json({
-        message:
-          "Cluster not found or cannot be deleted through this endpoint",
-      });
+      return res.status(404).json({ message: "Cluster not found or cannot be deleted through this endpoint" });
     }
 
-    // Deleting a cluster does not delete its tasks.
-    res.json({
-      message: "Cluster deleted successfully",
+    const broadcasts = await Broadcast.find({
+      sourceClusterId: cluster._id,
+      ownerId: req.user._id,
+    }).select("_id");
+    const broadcastIds = broadcasts.map((broadcast) => broadcast._id);
+
+    if (broadcastIds.length) {
+      const processingImport = await BroadcastImport.findOne({
+        broadcastId: { $in: broadcastIds },
+        status: "processing",
+      }).select("_id");
+      if (processingImport) {
+        return res.status(409).json({
+          message: "An import from this cluster is currently being processed. Please retry the deletion shortly.",
+        });
+      }
+    }
+
+    // Stop future imports first. Existing imports remain separate copies unless
+    // the owner explicitly selected the cascade-removal option.
+    if (broadcastIds.length) {
+      await Broadcast.updateMany(
+        { _id: { $in: broadcastIds }, ownerId: req.user._id, revokedAt: null },
+        { $set: { revokedAt: new Date() } }
+      );
+    }
+
+    let removedImportedClusters = 0;
+    let removedImportedTasks = 0;
+
+    const imports = broadcastIds.length
+      ? await BroadcastImport.find({ broadcastId: { $in: broadcastIds }, status: "completed" })
+      : [];
+
+    if (removeImportedCopies) {
+      for (const importRecord of imports) {
+        const mappedIds = [...new Set([
+          ...(importRecord.taskMappings || []).map((mapping) => String(mapping.importedTaskId)),
+          ...(importRecord.importedTaskIds || []).map(String),
+        ])];
+
+        if (mappedIds.length) {
+          const ids = mappedIds;
+          await ReminderDelivery.deleteMany({ taskId: { $in: ids }, status: { $ne: "sent" } });
+          // Remove only references to the copied tasks from this recipient's
+          // clusters before deleting the task documents.
+          await Cluster.updateMany(
+            { ownerId: importRecord.importerId, tasks: { $in: ids } },
+            { $pull: { tasks: { $in: ids } } }
+          );
+          const deletedTasks = await Task.deleteMany({
+            _id: { $in: ids },
+            userId: importRecord.importerId,
+          });
+          removedImportedTasks += deletedTasks.deletedCount || 0;
+        }
+
+        if (importRecord.importedClusterId) {
+          const deletedCluster = await Cluster.deleteOne({
+            _id: importRecord.importedClusterId,
+            ownerId: importRecord.importerId,
+            origin: "imported",
+            sourceBroadcastId: importRecord.broadcastId,
+          });
+          removedImportedClusters += deletedCluster.deletedCount || 0;
+        }
+
+        await ManagedUpdate.deleteMany({ broadcastImportId: importRecord._id });
+        await BroadcastImport.deleteOne({ _id: importRecord._id });
+      }
+    } else if (imports.length) {
+      // Preserve copies but detach them from the deleted source, stopping any
+      // future update proposals. Already-created proposals remain available.
+      await BroadcastImport.updateMany(
+        { _id: { $in: imports.map((item) => item._id) } },
+        {
+          $set: {
+            syncEnabled: false,
+            syncDisconnectedAt: new Date(),
+            syncDisconnectReason: "source-deleted",
+          },
+        }
+      );
+    }
+
+    await Cluster.deleteOne({ _id: cluster._id, ownerId: req.user._id, origin: "created" });
+
+    return res.json({
+      message: removeImportedCopies
+        ? "Cluster and its imported copies deleted successfully"
+        : "Cluster deleted successfully",
+      removedImportedCopies: Boolean(removeImportedCopies),
+      removedImportedClusters,
+      removedImportedTasks,
     });
   } catch (error) {
-    handleError(res, error, "Failed to delete cluster");
+    handleError(res, error, "Failed to delete cluster and its imported copies");
   }
 };

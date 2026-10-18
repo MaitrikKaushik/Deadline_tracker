@@ -33,6 +33,7 @@ function Clusters({ onNotify, onSessionExpired }) {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [removeImportedCopies, setRemoveImportedCopies] = useState(false);
 
   const { data, error, loading, reload, mutate } = useAsyncData(
     (signal) => getClusters(filter, { signal }),
@@ -49,6 +50,7 @@ function Clusters({ onNotify, onSessionExpired }) {
 
     setPendingDelete(null);
     setDeleteError("");
+    setRemoveImportedCopies(false);
   };
 
   const handleConfirmDelete = async () => {
@@ -60,7 +62,7 @@ function Clusters({ onNotify, onSessionExpired }) {
     setDeleteError("");
 
     try {
-      await deleteCluster(pendingDelete._id);
+      await deleteCluster(pendingDelete._id, { removeImportedCopies });
 
       const deletedId = pendingDelete._id;
 
@@ -70,10 +72,13 @@ function Clusters({ onNotify, onSessionExpired }) {
       );
 
       onNotify(
-        `Cluster "${pendingDelete.name}" deleted. Its deadlines were not deleted.`
+        removeImportedCopies
+          ? `Cluster "${pendingDelete.name}" and its mapped imported copies were deleted.`
+          : `Cluster "${pendingDelete.name}" deleted. Its deadlines were not deleted; existing imported copies were preserved.`
       );
 
       setPendingDelete(null);
+      setRemoveImportedCopies(false);
     } catch (deleteFailure) {
       if (isUnauthorized(deleteFailure)) {
         onSessionExpired();
@@ -186,10 +191,32 @@ function Clusters({ onNotify, onSessionExpired }) {
             <strong>{pendingDelete.name}</strong> will be removed.
           </p>
           <p>
-            Its {countLabel((pendingDelete.tasks || []).length)} will{" "}
-            <strong>not</strong> be deleted and will stay in your task
-            list.
+            Its {countLabel((pendingDelete.tasks || []).length)} will not be deleted from your personal task list.
+            Sharing links for this cluster will be revoked.
           </p>
+          <fieldset className="managed-delete-options">
+            <legend>What should happen to imported copies?</legend>
+            <label>
+              <input
+                type="radio"
+                name="cluster-delete-policy-list"
+                checked={!removeImportedCopies}
+                onChange={() => setRemoveImportedCopies(false)}
+                disabled={deleting}
+              />
+              <span><strong>Keep existing copies</strong><small>People keep the imported deadlines, but receive no future updates from this source.</small></span>
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="cluster-delete-policy-list"
+                checked={removeImportedCopies}
+                onChange={() => setRemoveImportedCopies(true)}
+                disabled={deleting}
+              />
+              <span><strong>Remove imported copies too</strong><small>Delete the copied tasks and imported clusters created from this source across recipients. If a recipient added a copied task to another cluster, that reference is removed too.</small></span>
+            </label>
+          </fieldset>
         </ConfirmDialog>
       )}
     </section>

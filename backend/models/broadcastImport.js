@@ -39,6 +39,11 @@ const broadcastImportSchema = new mongoose.Schema(
       default: null,
     },
     reminderEnabled: { type: Boolean, default: false },
+    // Imports are managed by default. A recipient may disconnect future updates.
+    // $ne: false queries also include legacy imports that predate this field.
+    syncEnabled: { type: Boolean, default: true },
+    syncDisconnectedAt: { type: Date, default: null },
+    syncDisconnectReason: { type: String, default: null },
     status: { type: String, enum: ["processing", "completed"], default: "processing" },
 
     // Source -> imported copy pairs, planned before any task is created.

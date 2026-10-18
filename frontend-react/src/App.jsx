@@ -5,6 +5,7 @@ import Clusters from "./pages/Clusters";
 import CreateCluster from "./pages/CreateCluster";
 import ClusterDetails from "./pages/ClusterDetails";
 import Broadcasts from "./pages/Broadcasts";
+import ManagedUpdates from "./pages/ManagedUpdates";
 import Navbar from "./components/Navbar";
 import TaskForm from "./components/TaskForm";
 import TaskList from "./components/TaskList";
@@ -161,6 +162,9 @@ function App() {
         throw new Error(
           data.message || "Unable to save task"
         );
+      }
+      if (data.managedUpdateWarning) {
+        notify(data.managedUpdateWarning);
       }
 
       if (isEditing) {
@@ -462,6 +466,15 @@ function App() {
           <ClusterDetails
             key={route.id}
             clusterId={route.id}
+            onNotify={notify}
+            onSessionExpired={handleSessionExpired}
+          />
+        </main>
+      )}
+
+      {route.name === "managed-updates" && (
+        <main className="cluster-content">
+          <ManagedUpdates
             onNotify={notify}
             onSessionExpired={handleSessionExpired}
           />

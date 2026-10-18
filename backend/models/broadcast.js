@@ -20,6 +20,8 @@ const broadcastTaskSchema = new mongoose.Schema(
       default: "general",
     },
     referenceLink: { type: String, default: "" },
+    // Stored privately for managed update proposals; omitted from public previews.
+    reminderEnabled: { type: Boolean, default: false },
   },
   { _id: false }
 );

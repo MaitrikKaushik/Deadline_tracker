@@ -13,7 +13,13 @@ const publicBroadcast = (broadcast) => ({
   name: broadcast.name,
   description: broadcast.description,
   code: broadcast.code,
-  tasks: broadcast.tasks,
+  // Reminder preference is stored privately for managed updates but must not be
+  // exposed in anonymous share previews.
+  tasks: (broadcast.tasks || []).map((task) => {
+    const value = task.toObject ? task.toObject() : { ...task };
+    delete value.reminderEnabled;
+    return value;
+  }),
   createdAt: broadcast.createdAt,
   updatedAt: broadcast.updatedAt,
   revokedAt: broadcast.revokedAt || null,
@@ -65,6 +71,7 @@ exports.createBroadcastFromCluster = async (req, res) => {
       priority: task.priority || "medium",
       deadlineType: task.deadlineType || "general",
       referenceLink: task.referenceLink || "",
+      reminderEnabled: Boolean(task.reminderEnabled),
     }));
 
     let broadcast;

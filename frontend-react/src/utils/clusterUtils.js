@@ -95,6 +95,7 @@ export const clusterPath = {
   create: "#/clusters/new",
   detail: (id) => `#/clusters/${encodeURIComponent(id)}`,
   broadcasts: "#/broadcasts",
+  managedUpdates: "#/managed-updates",
   broadcast: (code) => `#/broadcasts/${encodeURIComponent(code)}`,
 };
 
@@ -112,6 +113,10 @@ export function parseRoute(hash) {
 
   if (path === "/broadcasts") {
     return { name: "broadcasts" };
+  }
+
+  if (path === "/managed-updates") {
+    return { name: "managed-updates" };
   }
 
   const broadcastMatch = path.match(/^\/broadcasts\/([^/]+)$/);

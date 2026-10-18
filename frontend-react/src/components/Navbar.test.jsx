@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 
 import Navbar from "./Navbar";
+import { mockFetch, ok } from "../test/testUtils";
 
 describe("Navbar", () => {
   test("shows Tasks and a Clusters menu with both cluster links", () => {
@@ -25,6 +26,16 @@ describe("Navbar", () => {
     expect(
       screen.getByRole("link", { name: "Discover & Import" }).getAttribute("href")
     ).toBe("#/broadcasts");
+  });
+
+  test("shows a pending-update count on the Clusters menu before it is opened", async () => {
+    mockFetch({
+      "GET /api/managed-updates": ok({ updates: [], pendingCount: 3, connections: [] }),
+    });
+
+    render(<Navbar route={{ name: "tasks" }} />);
+
+    expect(await screen.findByLabelText("3 pending updates")).toBeTruthy();
   });
 
   test("toggles aria-expanded and closes on Escape and after choosing a link", () => {

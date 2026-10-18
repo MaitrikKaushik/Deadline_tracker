@@ -25,10 +25,12 @@ const taskRoutes = require("./routes/taskroutes");
 const authRoutes = require("./routes/authRoutes");
 const clusterRoutes = require("./routes/clusterRoutes");
 const broadcastRoutes = require("./routes/broadcastRoutes");
+const managedUpdateRoutes = require("./routes/managedUpdateRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/clusters", clusterRoutes);
 app.use("/api/broadcasts", broadcastRoutes);
+app.use("/api/managed-updates", managedUpdateRoutes);
 
 module.exports = app;

@@ -15,6 +15,9 @@ import {
   getClusters,
   isUnauthorized,
   updateCluster,
+  getManagedUpdates,
+  decideManagedUpdate,
+  disconnectManagedImport,
 } from "./api";
 
 describe("api client", () => {
@@ -75,6 +78,29 @@ describe("api client", () => {
       "POST /api/broadcasts/b1/revoke",
     ]);
     expect(calls[4].body).toEqual({ taskIds: ["t1"], mode: "cluster", reminderEnabled: false });
+  });
+
+  test("uses managed update inbox, decisions, disconnect, and cascade delete payloads", async () => {
+    const { calls } = mockFetch({
+      "GET /api/managed-updates": ok({ updates: [], pendingCount: 0 }),
+      "POST /api/managed-updates/u1/decide": ok({ status: "resolved" }),
+      "POST /api/managed-updates/imports/i1/disconnect": ok({ syncEnabled: false }),
+      "DELETE /api/clusters/c2": ok({ removedImportedCopies: true }),
+    });
+
+    await getManagedUpdates();
+    await decideManagedUpdate("u1", [{ field: "reminderEnabled", action: "reject" }]);
+    await disconnectManagedImport("i1");
+    await deleteCluster("c2", { removeImportedCopies: true });
+
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      "GET /api/managed-updates",
+      "POST /api/managed-updates/u1/decide",
+      "POST /api/managed-updates/imports/i1/disconnect",
+      "DELETE /api/clusters/c2",
+    ]);
+    expect(calls[1].body).toEqual({ decisions: [{ field: "reminderEnabled", action: "reject" }] });
+    expect(calls[3].body).toEqual({ removeImportedCopies: true });
   });
 
   test("throws an ApiError carrying the server message and status", async () => {

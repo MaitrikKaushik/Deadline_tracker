@@ -1614,3 +1614,266 @@ button:disabled,
   background: #ffe1df;
   color: #8f1111;
 }
+
+/* Phase 4: recipient-controlled managed updates */
+.navbar-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #a91515;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.managed-updates-page {
+  display: grid;
+  gap: 22px;
+}
+
+.managed-updates-intro {
+  max-width: 760px;
+  margin: 8px 0 0;
+  color: #765e58;
+  line-height: 1.6;
+}
+
+.managed-update-list {
+  display: grid;
+  gap: 18px;
+}
+
+.managed-update-card {
+  padding: 22px;
+  border: 1px solid #eadfdb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 6px 20px rgb(70 35 25 / 4%);
+}
+
+.managed-update-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.managed-update-heading h3 {
+  margin: 4px 0 6px;
+  color: #3e2723;
+}
+
+.managed-update-source,
+.managed-update-guidance {
+  color: #765e58;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.managed-update-status {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #fff2cc;
+  color: #805900;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.managed-change-list {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.managed-change-row {
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #e8deda;
+  border-radius: 12px;
+}
+
+.managed-change-row legend {
+  padding: 0 6px;
+  color: #4a2c25;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.managed-change-values {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.managed-change-values > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.managed-change-values small {
+  color: #886e66;
+  font-size: 11px;
+}
+
+.managed-change-values strong {
+  overflow-wrap: anywhere;
+  color: #3e2723;
+  font-size: 13px;
+}
+
+.managed-change-values > span {
+  color: #b36c35;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.managed-change-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f0e6e2;
+}
+
+.managed-change-choices label,
+.managed-delete-options label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #533a33;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.managed-change-choices input,
+.managed-delete-options input {
+  margin-top: 3px;
+  accent-color: #a91515;
+}
+
+.managed-update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.managed-delete-options {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0 4px;
+  padding: 14px;
+  border: 1px solid #eadfdb;
+  border-radius: 12px;
+}
+
+.managed-delete-options legend {
+  padding: 0 6px;
+  font-weight: 800;
+}
+
+.managed-delete-options label span {
+  display: grid;
+  gap: 3px;
+}
+
+.managed-delete-options label small {
+  color: #765e58;
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .managed-update-card {
+    padding: 16px;
+  }
+
+  .managed-update-heading {
+    flex-direction: column;
+  }
+
+  .managed-change-values {
+    grid-template-columns: 1fr;
+  }
+
+  .managed-change-values > span {
+    transform: rotate(90deg);
+    justify-self: start;
+  }
+
+  .managed-change-choices {
+    flex-direction: column;
+    gap: 9px;
+  }
+}
+
+
+.managed-connections {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #eadfdb;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.managed-connections h3 {
+  margin: 0 0 5px;
+  color: #3e2723;
+}
+
+.managed-updates-guidance {
+  margin: 0;
+  color: #765e58;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.managed-connection-list {
+  display: grid;
+  gap: 10px;
+}
+
+.managed-connection-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid #eee4e0;
+  border-radius: 12px;
+}
+
+.managed-connection-card p {
+  margin: 4px 0;
+  color: #765e58;
+  font-size: 12px;
+}
+
+.managed-connection-state {
+  color: #246b45;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.managed-connection-state.disconnected {
+  color: #765e58;
+}
+
+@media (max-width: 600px) {
+  .managed-connection-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

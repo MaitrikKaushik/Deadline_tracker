@@ -177,7 +177,7 @@ describe("Cluster details: editing", () => {
       name: "Renamed",
       taskIds: ["t2", "t3"],
     });
-    expect(onNotify).toHaveBeenCalledWith("Cluster updated.");
+    expect(onNotify).toHaveBeenCalledWith("Cluster updated. Shared recipients will be asked before the rename is applied.");
     expect(screen.queryByRole("button", { name: "Save Changes" })).toBeNull();
   });
 
@@ -326,6 +326,22 @@ describe("Cluster details: deleting", () => {
     expect(onNotify).toHaveBeenCalledWith(
       expect.stringMatching(/Finals.*deleted.*deadlines were not deleted/)
     );
+  });
+
+  test("can explicitly remove imported copies when deleting the source cluster", async () => {
+    const { callsTo } = mockFetch({
+      "GET /api/clusters/c1": ok(created),
+      "DELETE /api/clusters/c1": ok({ message: "Cluster and its imported copies deleted successfully" }),
+    });
+
+    renderPage("c1");
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    const dialog = screen.getByRole("alertdialog");
+    fireEvent.click(within(dialog).getByLabelText(/Remove imported copies too/i));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete Cluster" }));
+
+    await waitFor(() => expect(window.location.hash).toBe("#/clusters"));
+    expect(callsTo("DELETE", "/api/clusters/c1")[0].body).toEqual({ removeImportedCopies: true });
   });
 
   test("a failed delete shows the error and does not navigate or report success", async () => {

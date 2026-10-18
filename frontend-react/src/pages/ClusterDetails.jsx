@@ -48,6 +48,7 @@ function ClusterDetails({ clusterId, onNotify, onSessionExpired }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [removeImportedCopies, setRemoveImportedCopies] = useState(false);
   const deletingRef = useRef(false);
 
   const [shareOpen, setShareOpen] = useState(false);
@@ -130,11 +131,16 @@ function ClusterDetails({ clusterId, onNotify, onSessionExpired }) {
         payload.taskIds = uniqueIds(editIds);
       }
 
+      const renamed = payload.name !== cluster.name;
       const updated = await updateCluster(cluster._id, payload);
 
       mutate(() => updated);
       setEditing(false);
-      onNotify("Cluster updated.");
+      onNotify(
+        updated.managedUpdateWarning || (renamed
+          ? "Cluster updated. Shared recipients will be asked before the rename is applied."
+          : "Cluster updated.")
+      );
     } catch (saveError) {
       if (isUnauthorized(saveError)) {
         onSessionExpired();
@@ -222,10 +228,12 @@ function ClusterDetails({ clusterId, onNotify, onSessionExpired }) {
     setDeleteError("");
 
     try {
-      await deleteCluster(cluster._id);
+      await deleteCluster(cluster._id, { removeImportedCopies });
 
       onNotify(
-        `Cluster "${cluster.name}" deleted. Its deadlines were not deleted.`
+        removeImportedCopies
+          ? `Cluster "${cluster.name}" and its mapped imported copies were deleted.`
+          : `Cluster "${cluster.name}" deleted. Its deadlines were not deleted; existing imported copies were preserved.`
       );
 
       navigate(clusterPath.list);
@@ -336,6 +344,7 @@ function ClusterDetails({ clusterId, onNotify, onSessionExpired }) {
                     className="delete-btn"
                     onClick={() => {
                       setDeleteError("");
+                      setRemoveImportedCopies(false);
                       setConfirmingDelete(true);
                     }}
                   >
@@ -564,9 +573,32 @@ function ClusterDetails({ clusterId, onNotify, onSessionExpired }) {
             <strong>{cluster.name}</strong> will be removed.
           </p>
           <p>
-            Its {countLabel(tasks.length)} will <strong>not</strong> be
-            deleted and will stay in your task list.
+            Its {countLabel(tasks.length)} will not be deleted from your personal task list.
+            Sharing links for this cluster will be revoked.
           </p>
+          <fieldset className="managed-delete-options">
+            <legend>What should happen to imported copies?</legend>
+            <label>
+              <input
+                type="radio"
+                name="cluster-delete-policy-detail"
+                checked={!removeImportedCopies}
+                onChange={() => setRemoveImportedCopies(false)}
+                disabled={deleting}
+              />
+              <span><strong>Keep existing copies</strong><small>People keep their copies, but receive no future updates from this source.</small></span>
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="cluster-delete-policy-detail"
+                checked={removeImportedCopies}
+                onChange={() => setRemoveImportedCopies(true)}
+                disabled={deleting}
+              />
+              <span><strong>Remove imported copies too</strong><small>Delete copied tasks and imported clusters created from this source across recipients.</small></span>
+            </label>
+          </fieldset>
         </ConfirmDialog>
       )}
     </section>

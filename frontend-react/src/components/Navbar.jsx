@@ -1,15 +1,39 @@
 import { useEffect, useRef, useState } from "react";
 
 import { clusterPath } from "../utils/clusterUtils";
+import { getManagedUpdates } from "../services/api";
 
 function Navbar({ route }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const menuRef = useRef(null);
 
   const clustersActive = route.name.startsWith("cluster");
   const broadcastsActive = route.name.startsWith("broadcast");
+  const updatesActive = route.name === "managed-updates";
 
   const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    let active = true;
+    const refreshCount = async () => {
+      try {
+        const result = await getManagedUpdates();
+        if (active) setPendingCount(Number(result?.pendingCount || 0));
+      } catch {
+        // The inbox itself displays meaningful authentication/network errors.
+      }
+    };
+
+    refreshCount();
+    const refreshTimer = window.setInterval(refreshCount, 30000);
+    window.addEventListener("managed-updates-changed", refreshCount);
+    return () => {
+      active = false;
+      window.clearInterval(refreshTimer);
+      window.removeEventListener("managed-updates-changed", refreshCount);
+    };
+  }, [route.name]);
 
   // Close the dropdown on Escape or when clicking outside of it.
   useEffect(() => {
@@ -60,7 +84,13 @@ function Navbar({ route }) {
             aria-controls="clusters-menu"
             onClick={() => setMenuOpen((open) => !open)}
           >
-            Clusters <span aria-hidden="true">▾</span>
+            Clusters
+            {pendingCount > 0 && (
+              <span className="navbar-count-badge" aria-label={`${pendingCount} pending updates`}>
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            )}
+            <span aria-hidden="true">▾</span>
           </button>
 
           {menuOpen && (
@@ -84,6 +114,21 @@ function Navbar({ route }) {
                   aria-current={broadcastsActive ? "page" : undefined}
                 >
                   Discover & Import
+                </a>
+              </li>
+
+              <li>
+                <a
+                  href={clusterPath.managedUpdates}
+                  onClick={closeMenu}
+                  aria-current={updatesActive ? "page" : undefined}
+                >
+                  Pending Updates
+                  {pendingCount > 0 && (
+                    <span className="navbar-count-badge" aria-label={`${pendingCount} pending updates`}>
+                      {pendingCount > 99 ? "99+" : pendingCount}
+                    </span>
+                  )}
                 </a>
               </li>
 

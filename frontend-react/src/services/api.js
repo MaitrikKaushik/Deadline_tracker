@@ -84,9 +84,10 @@ export const updateCluster = (id, payload) =>
     body: payload,
   });
 
-export const deleteCluster = (id) =>
+export const deleteCluster = (id, options) =>
   request(`/api/clusters/${encodeURIComponent(id)}`, {
     method: "DELETE",
+    ...(options !== undefined ? { body: options } : {}),
   });
 
 // ---- Cluster broadcasts (Phase 3) ----
@@ -114,3 +115,20 @@ export const importBroadcast = (code, payload) =>
 
 export const revokeBroadcast = (id) =>
   request(`/api/broadcasts/${encodeURIComponent(id)}/revoke`, { method: "POST" });
+
+
+// ---- Managed source updates (Phase 4) ----
+
+export const getManagedUpdates = ({ signal } = {}) =>
+  request("/api/managed-updates", { signal });
+
+export const decideManagedUpdate = (id, decisions) =>
+  request(`/api/managed-updates/${encodeURIComponent(id)}/decide`, {
+    method: "POST",
+    body: { decisions },
+  });
+
+export const disconnectManagedImport = (importId) =>
+  request(`/api/managed-updates/imports/${encodeURIComponent(importId)}/disconnect`, {
+    method: "POST",
+  });

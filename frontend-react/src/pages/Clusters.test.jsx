@@ -227,6 +227,23 @@ describe("Clusters page", () => {
     );
   });
 
+  test("can request removal of imported copies while deleting the source cluster", async () => {
+    const { callsTo } = mockFetch({
+      "GET /api/clusters?type=all": ok([mine]),
+      "DELETE /api/clusters/m1": ok({ message: "Cluster and its imported copies deleted successfully" }),
+    });
+
+    renderPage();
+    await screen.findByText("Exam Prep");
+    fireEvent.click(screen.getByRole("button", { name: "Delete Exam Prep" }));
+    const dialog = screen.getByRole("alertdialog");
+    fireEvent.click(within(dialog).getByLabelText(/Remove imported copies too/i));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete Cluster" }));
+
+    await waitFor(() => expect(screen.queryByText("Exam Prep")).toBeNull());
+    expect(callsTo("DELETE", "/api/clusters/m1")[0].body).toEqual({ removeImportedCopies: true });
+  });
+
   test("cancelling the confirmation does not delete anything", async () => {
     const { callsTo } = mockFetch({
       "GET /api/clusters?type=all": ok([mine]),

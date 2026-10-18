@@ -72,6 +72,7 @@ describe("parseRoute", () => {
     ["#/clusters/new", { name: "cluster-new" }],
     ["#/clusters/abc123", { name: "cluster-detail", id: "abc123" }],
     ["#/broadcasts", { name: "broadcasts" }],
+    ["#/managed-updates", { name: "managed-updates" }],
     ["#/broadcasts/A1B2C3D4E5", { name: "broadcast-detail", code: "A1B2C3D4E5" }],
   ])("%s", (hash, expected) => {
     expect(parseRoute(hash)).toEqual(expected);

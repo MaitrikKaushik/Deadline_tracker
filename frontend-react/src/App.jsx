@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import Clusters from "./pages/Clusters";
 import CreateCluster from "./pages/CreateCluster";
 import ClusterDetails from "./pages/ClusterDetails";
+import Broadcasts from "./pages/Broadcasts";
 import Navbar from "./components/Navbar";
 import TaskForm from "./components/TaskForm";
 import TaskList from "./components/TaskList";
@@ -26,6 +27,7 @@ const initialFormData = {
 
 function App() {
   const [user, setUser] = useState(null);
+  const [showLoginForBroadcast, setShowLoginForBroadcast] = useState(false);
 
   const [tasks, setTasks] = useState([]);
 
@@ -336,6 +338,23 @@ function App() {
     );
   }
 
+  if (!user && route.name === "broadcast-detail" && !showLoginForBroadcast) {
+    return (
+      <div className="app">
+        <main className="cluster-content">
+          <Broadcasts
+            key={route.code}
+            code={route.code}
+            canImport={false}
+            onRequestLogin={() => setShowLoginForBroadcast(true)}
+            onNotify={notify}
+            onSessionExpired={handleSessionExpired}
+          />
+        </main>
+      </div>
+    );
+  }
+
   if (!user) {
     return <Login />;
   }
@@ -443,6 +462,18 @@ function App() {
           <ClusterDetails
             key={route.id}
             clusterId={route.id}
+            onNotify={notify}
+            onSessionExpired={handleSessionExpired}
+          />
+        </main>
+      )}
+
+      {(route.name === "broadcasts" || route.name === "broadcast-detail") && (
+        <main className="cluster-content">
+          <Broadcasts
+            key={route.code || "broadcast-search"}
+            code={route.code || null}
+            canImport
             onNotify={notify}
             onSessionExpired={handleSessionExpired}
           />

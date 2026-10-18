@@ -64,6 +64,28 @@ describe("Cluster details: viewing", () => {
     expect(titles).toEqual(["Beta", "Alpha"]);
   });
 
+  test("publishes only the selected deadlines and displays a share link", async () => {
+    const { calls } = mockFetch({
+      "GET /api/clusters/c1": ok(created),
+      "POST /api/clusters/c1/broadcast": ok({ _id: "b1", code: "A1B2C3D4E5", name: "Finals", tasks: [t1] }, 201),
+    });
+    const { onNotify } = renderPage("c1");
+    await screen.findByRole("heading", { name: "Finals" });
+    fireEvent.click(screen.getByRole("button", { name: "Share Cluster" }));
+
+    const betaCheckbox = screen.getByRole("checkbox", { name: /Beta/ });
+    expect(betaCheckbox.checked).toBe(true);
+    fireEvent.click(betaCheckbox);
+    fireEvent.change(screen.getByLabelText(/Optional note/), { target: { value: "Study group" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create share link" }));
+
+    await screen.findByLabelText("Share link");
+    const call = calls.find((item) => item.method === "POST");
+    expect(call.body).toEqual({ taskIds: ["t1"], description: "Study group" });
+    expect(screen.getByLabelText("Share code").value).toBe("A1B2C3D4E5");
+    expect(onNotify).toHaveBeenCalledWith("Share link created. Only the selected deadlines are included.");
+  });
+
   test("task cards inside a cluster are read-only (no task actions)", async () => {
     mockFetch({ "GET /api/clusters/c1": ok(created) });
 

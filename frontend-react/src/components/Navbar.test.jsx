@@ -22,6 +22,9 @@ describe("Navbar", () => {
     expect(
       screen.getByRole("link", { name: "Create Cluster" }).getAttribute("href")
     ).toBe("#/clusters/new");
+    expect(
+      screen.getByRole("link", { name: "Discover & Import" }).getAttribute("href")
+    ).toBe("#/broadcasts");
   });
 
   test("toggles aria-expanded and closes on Escape and after choosing a link", () => {

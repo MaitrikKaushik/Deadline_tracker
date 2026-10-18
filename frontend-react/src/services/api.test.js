@@ -3,6 +3,12 @@ import { describe, expect, test } from "vitest";
 import { fail, mockFetch, ok } from "../test/testUtils";
 import {
   ApiError,
+  createBroadcast,
+  getBroadcast,
+  getBroadcasts,
+  getMyBroadcasts,
+  importBroadcast,
+  revokeBroadcast,
   createCluster,
   createTask,
   deleteCluster,
@@ -40,6 +46,35 @@ describe("api client", () => {
     );
 
     expect(calls[1].body).toEqual({ name: "A", taskIds: ["t1"] });
+  });
+
+
+  test("uses the broadcast discovery, share, import, and revoke endpoints", async () => {
+    const { calls } = mockFetch({
+      "POST /api/clusters/c1/broadcast": ok({ code: "A1B2C3D4E5" }, 201),
+      "GET /api/broadcasts?q=exam%20prep": ok([]),
+      "GET /api/broadcasts/mine": ok([]),
+      "GET /api/broadcasts/A1B2C3D4E5": ok({ code: "A1B2C3D4E5" }),
+      "POST /api/broadcasts/A1B2C3D4E5/import": ok({ mode: "cluster" }, 201),
+      "POST /api/broadcasts/b1/revoke": ok({ message: "revoked" }),
+    });
+
+    await createBroadcast("c1", { taskIds: ["t1"], description: "Note" });
+    await getBroadcasts("exam prep");
+    await getMyBroadcasts();
+    await getBroadcast("A1B2C3D4E5");
+    await importBroadcast("A1B2C3D4E5", { taskIds: ["t1"], mode: "cluster", reminderEnabled: false });
+    await revokeBroadcast("b1");
+
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      "POST /api/clusters/c1/broadcast",
+      "GET /api/broadcasts?q=exam%20prep",
+      "GET /api/broadcasts/mine",
+      "GET /api/broadcasts/A1B2C3D4E5",
+      "POST /api/broadcasts/A1B2C3D4E5/import",
+      "POST /api/broadcasts/b1/revoke",
+    ]);
+    expect(calls[4].body).toEqual({ taskIds: ["t1"], mode: "cluster", reminderEnabled: false });
   });
 
   test("throws an ApiError carrying the server message and status", async () => {

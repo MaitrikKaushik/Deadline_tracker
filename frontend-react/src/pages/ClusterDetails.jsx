@@ -5,10 +5,12 @@ import TaskCard from "../components/TaskCard";
 import TaskSelector from "../components/TaskSelector";
 import useAsyncData from "../hooks/useAsyncData";
 import {
+  createBroadcast,
   deleteCluster,
   getCluster,
   getTasks,
   isUnauthorized,
+  revokeBroadcast,
   updateCluster,
 } from "../services/api";
 import {
@@ -47,6 +49,15 @@ function ClusterDetails({ clusterId, onNotify, onSessionExpired }) {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const deletingRef = useRef(false);
+
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareSelectedIds, setShareSelectedIds] = useState([]);
+  const [shareDescription, setShareDescription] = useState("");
+  const [shareError, setShareError] = useState("");
+  const [sharing, setSharing] = useState(false);
+  const [shareResult, setShareResult] = useState(null);
+  const [revokingShare, setRevokingShare] = useState(false);
+  const [shareRevoked, setShareRevoked] = useState(false);
 
   const loadAllTasks = async () => {
     setAllTasks({ status: "loading", data: [], error: "" });
@@ -134,6 +145,70 @@ function ClusterDetails({ clusterId, onNotify, onSessionExpired }) {
     } finally {
       savingRef.current = false;
       setSaving(false);
+    }
+  };
+
+  const openShareDialog = () => {
+    setShareSelectedIds(taskIdsOf(cluster));
+    setShareDescription("");
+    setShareError("");
+    setShareResult(null);
+    setShareRevoked(false);
+    setShareOpen(true);
+  };
+
+  const handleCreateBroadcast = async (event) => {
+    event.preventDefault();
+    if (sharing || shareSelectedIds.length === 0) return;
+    setSharing(true);
+    setShareError("");
+    try {
+      const result = await createBroadcast(cluster._id, {
+        taskIds: shareSelectedIds,
+        description: shareDescription,
+      });
+      setShareResult(result);
+      onNotify("Share link created. Only the selected deadlines are included.");
+    } catch (failure) {
+      if (isUnauthorized(failure)) {
+        onSessionExpired();
+        return;
+      }
+      setShareError(failure.message);
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleCopyShareLink = async () => {
+    const link = `${window.location.origin}${window.location.pathname}${clusterPath.broadcast(shareResult.code)}`;
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard access is unavailable. Select the share link and copy it manually.");
+      }
+      await navigator.clipboard.writeText(link);
+      onNotify("Share link copied to clipboard.");
+    } catch (error) {
+      setShareError(error.message || "Unable to copy the share link. Select and copy it manually.");
+    }
+  };
+
+  const handleRevokeBroadcast = async () => {
+    if (!shareResult || revokingShare) return;
+    setRevokingShare(true);
+    setShareError("");
+    try {
+      await revokeBroadcast(shareResult._id);
+      setShareRevoked(true);
+      onNotify("Sharing revoked. The share code can no longer be used for new imports.");
+    } catch (failure) {
+      if (isUnauthorized(failure)) {
+        onSessionExpired();
+        return;
+      }
+      setShareError(failure.message);
+    } finally {
+      setRevokingShare(false);
     }
   };
 
@@ -239,6 +314,15 @@ function ClusterDetails({ clusterId, onNotify, onSessionExpired }) {
 
               {!isImported && (
                 <div className="page-actions">
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={openShareDialog}
+                    disabled={tasks.length === 0}
+                  >
+                    Share Cluster
+                  </button>
+
                   <button
                     type="button"
                     className="secondary-btn"
@@ -396,6 +480,69 @@ function ClusterDetails({ clusterId, onNotify, onSessionExpired }) {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {shareOpen && (
+        <div className="dialog-backdrop" role="presentation">
+          <section className="dialog broadcast-dialog" role="dialog" aria-modal="true" aria-labelledby="share-dialog-title">
+            <h2 id="share-dialog-title">Share {cluster.name}</h2>
+            {!shareResult ? (
+              <form onSubmit={handleCreateBroadcast}>
+                <p>Choose which deadlines other people can preview and import. Your original tasks remain private and unchanged.</p>
+                <div className="broadcast-task-options">
+                  {tasks.map((task) => {
+                    const id = String(task._id);
+                    return (
+                      <label className="broadcast-task-option" key={id}>
+                        <input
+                          type="checkbox"
+                          checked={shareSelectedIds.includes(id)}
+                          onChange={() => setShareSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
+                        />
+                        <span><strong>{task.title}</strong><small>{formatDate(task.deadline)}</small></span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="share-description">Optional note (up to 500 characters)</label>
+                  <textarea id="share-description" rows="3" maxLength={500} value={shareDescription} onChange={(event) => setShareDescription(event.target.value)} />
+                </div>
+                {shareError && <p className="form-error" role="alert">{shareError}</p>}
+                <div className="form-actions">
+                  <button type="submit" className="primary-btn" disabled={sharing || shareSelectedIds.length === 0}>{sharing ? "Creating link..." : "Create share link"}</button>
+                  <button type="button" className="secondary-btn" disabled={sharing} onClick={() => setShareOpen(false)}>Cancel</button>
+                </div>
+              </form>
+            ) : (
+              <div>
+                {shareRevoked ? (
+                  <p className="readonly-banner">Sharing has been revoked. This link can no longer be used for new imports.</p>
+                ) : (
+                  <>
+                    <p>Your share link is ready. Anyone with the link can preview the selected deadlines.</p>
+                    <div className="form-group">
+                      <label htmlFor="share-code">Share code</label>
+                      <input id="share-code" readOnly value={shareResult.code} />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="share-link">Share link</label>
+                      <input id="share-link" readOnly value={`${window.location.origin}${window.location.pathname}${clusterPath.broadcast(shareResult.code)}`} onFocus={(event) => event.target.select()} />
+                    </div>
+                    <div className="form-actions">
+                      <button type="button" className="primary-btn" onClick={handleCopyShareLink}>Copy share link</button>
+                      <button type="button" className="delete-btn" disabled={revokingShare} onClick={handleRevokeBroadcast}>{revokingShare ? "Revoking..." : "Revoke sharing"}</button>
+                    </div>
+                  </>
+                )}
+                {shareError && <p className="form-error" role="alert">{shareError}</p>}
+                <div className="form-actions">
+                  <button type="button" className="secondary-btn" onClick={() => setShareOpen(false)}>Close</button>
+                </div>
+              </div>
+            )}
+          </section>
         </div>
       )}
 

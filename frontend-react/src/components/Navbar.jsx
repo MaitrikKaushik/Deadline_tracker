@@ -7,6 +7,7 @@ function Navbar({ route }) {
   const menuRef = useRef(null);
 
   const clustersActive = route.name.startsWith("cluster");
+  const broadcastsActive = route.name.startsWith("broadcast");
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -73,6 +74,16 @@ function Navbar({ route }) {
                   }
                 >
                   Show Clusters
+                </a>
+              </li>
+
+              <li>
+                <a
+                  href={clusterPath.broadcasts}
+                  onClick={closeMenu}
+                  aria-current={broadcastsActive ? "page" : undefined}
+                >
+                  Discover & Import
                 </a>
               </li>
 

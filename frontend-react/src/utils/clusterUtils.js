@@ -94,6 +94,8 @@ export const clusterPath = {
   list: "#/clusters",
   create: "#/clusters/new",
   detail: (id) => `#/clusters/${encodeURIComponent(id)}`,
+  broadcasts: "#/broadcasts",
+  broadcast: (code) => `#/broadcasts/${encodeURIComponent(code)}`,
 };
 
 export function parseRoute(hash) {
@@ -106,6 +108,17 @@ export function parseRoute(hash) {
 
   if (path === "/clusters/new") {
     return { name: "cluster-new" };
+  }
+
+  if (path === "/broadcasts") {
+    return { name: "broadcasts" };
+  }
+
+  const broadcastMatch = path.match(/^\/broadcasts\/([^/]+)$/);
+  if (broadcastMatch) {
+    let code = broadcastMatch[1];
+    try { code = decodeURIComponent(code); } catch { /* keep raw code for API validation */ }
+    return { name: "broadcast-detail", code };
   }
 
   const match = path.match(/^\/clusters\/([^/]+)$/);

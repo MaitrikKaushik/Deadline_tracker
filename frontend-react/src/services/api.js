@@ -88,3 +88,29 @@ export const deleteCluster = (id) =>
   request(`/api/clusters/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
+
+// ---- Cluster broadcasts (Phase 3) ----
+
+export const createBroadcast = (clusterId, payload) =>
+  request(`/api/clusters/${encodeURIComponent(clusterId)}/broadcast`, {
+    method: "POST",
+    body: payload,
+  });
+
+export const getBroadcasts = (query = "", { signal } = {}) =>
+  request(`/api/broadcasts?q=${encodeURIComponent(query)}`, { signal });
+
+export const getMyBroadcasts = ({ signal } = {}) =>
+  request("/api/broadcasts/mine", { signal });
+
+export const getBroadcast = (code, { signal } = {}) =>
+  request(`/api/broadcasts/${encodeURIComponent(code)}`, { signal });
+
+export const importBroadcast = (code, payload) =>
+  request(`/api/broadcasts/${encodeURIComponent(code)}/import`, {
+    method: "POST",
+    body: payload,
+  });
+
+export const revokeBroadcast = (id) =>
+  request(`/api/broadcasts/${encodeURIComponent(id)}/revoke`, { method: "POST" });

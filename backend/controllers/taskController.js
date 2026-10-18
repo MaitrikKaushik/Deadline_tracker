@@ -1,6 +1,19 @@
 const Task = require("../models/task");
 const ReminderDelivery = require("../models/reminderDelivery");
 
+// Only these fields may be changed through updateTask. Anything else in
+// the request body (userId, _id, createdAt, ...) is ignored.
+const EDITABLE_TASK_FIELDS = [
+  "title",
+  "description",
+  "deadline",
+  "reminderEnabled",
+  "priority",
+  "status",
+  "deadlineType",
+  "referenceLink",
+];
+
 const validateDeadline = (deadline) => {
   const deadlineDate = new Date(deadline);
 
@@ -92,9 +105,25 @@ exports.getTaskById = async (req, res) => {
 // UPDATE TASK
 exports.updateTask = async (req, res) => {
   try {
-    if (req.body.deadline !== undefined) {
+    const body = req.body || {};
+
+    const updates = {};
+
+    for (const field of EDITABLE_TASK_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(body, field)) {
+        updates[field] = body[field];
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        message: "No valid fields provided to update",
+      });
+    }
+
+    if (updates.deadline !== undefined) {
       const deadlineError = validateDeadline(
-        req.body.deadline
+        updates.deadline
       );
 
       if (deadlineError) {
@@ -109,7 +138,7 @@ exports.updateTask = async (req, res) => {
         _id: req.params.id,
         userId: req.user._id,
       },
-      req.body,
+      { $set: updates },
       {
         new: true,
       }

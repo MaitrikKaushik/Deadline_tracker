@@ -136,8 +136,19 @@ function ClusterDetails({ clusterId, onNotify, onSessionExpired }) {
 
       mutate(() => updated);
       setEditing(false);
+      let updateNotice = updated.managedUpdateWarning;
+      if (!updateNotice && updated.managedSyncSummary) {
+        const summary = updated.managedSyncSummary;
+        if (summary.broadcastsFound === 0) {
+          updateNotice = "Cluster saved, but no broadcast is linked to this source cluster. No recipient update could be prepared.";
+        } else {
+          const broadcastLabel = `${summary.broadcastsUpdated || 0} shared broadcast${summary.broadcastsUpdated === 1 ? "" : "s"}`;
+          const proposalLabel = `${summary.proposalsCreated || 0} recipient update proposal${summary.proposalsCreated === 1 ? "" : "s"}`;
+          updateNotice = `Cluster saved. Updated ${broadcastLabel} and prepared ${proposalLabel} across ${summary.activeImportsFound || 0} connected imported cluster${summary.activeImportsFound === 1 ? "" : "s"}.`;
+        }
+      }
       onNotify(
-        updated.managedUpdateWarning || (renamed
+        updateNotice || (renamed
           ? "Cluster updated. Shared recipients will be asked before the rename is applied."
           : "Cluster updated.")
       );

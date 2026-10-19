@@ -43,7 +43,10 @@ const broadcastSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true, maxlength: 100 },
     description: { type: String, default: "", trim: true, maxlength: 500 },
     code: { type: String, required: true, unique: true, uppercase: true, trim: true },
-    tasks: { type: [broadcastTaskSchema], validate: [(items) => items.length > 0, "At least one deadline is required"] },
+    // Existing broadcasts mirror their source cluster and may become empty
+    // after the owner removes the last deadline. The create endpoint still
+    // enforces a non-empty selection for new broadcasts.
+    tasks: { type: [broadcastTaskSchema], default: [] },
     revokedAt: { type: Date, default: null, index: true },
   },
   { timestamps: true }

@@ -215,6 +215,129 @@ describe("Managed updates", () => {
     expect((await Cluster.findById(importedCluster._id)).name).toBe("Updated Finals");
   });
 
+  test("removing a deadline from the source cluster updates the broadcast and proposes opt-in removal", async () => {
+    const response = await request(app)
+      .put(`/api/clusters/${sourceCluster._id}`)
+      .set("Cookie", authCookie(owner._id))
+      .send({ taskIds: [] });
+
+    expect(response.statusCode).toBe(200);
+    expect((await Cluster.findById(sourceCluster._id)).tasks).toHaveLength(0);
+    expect((await Broadcast.findById(broadcast._id)).tasks).toHaveLength(0);
+    expect(response.body.managedSyncSummary).toMatchObject({
+      broadcastsFound: 1,
+      broadcastsUpdated: 1,
+      activeImportsFound: 1,
+      proposalsCreated: 1,
+    });
+
+    const inbox = await request(app)
+      .get("/api/managed-updates")
+      .set("Cookie", authCookie(recipient._id));
+    expect(inbox.statusCode).toBe(200);
+    expect(inbox.body.pendingCount).toBe(1);
+    const proposal = inbox.body.updates[0];
+    expect(proposal.targetType).toBe("membership");
+    expect(proposal.changes[0].field).toBe("membership");
+    expect(proposal.changes[0].proposedValue.action).toBe("remove");
+
+    // Owner changes are proposed, not silently applied to the recipient.
+    expect((await Cluster.findById(importedCluster._id)).tasks.map(String)).toContain(String(importedTask._id));
+
+    const decision = await request(app)
+      .post(`/api/managed-updates/${proposal._id}/decide`)
+      .set("Cookie", authCookie(recipient._id))
+      .send({ decisions: [{ field: "membership", action: "accept" }] });
+    expect(decision.statusCode).toBe(200);
+    expect((await Cluster.findById(importedCluster._id)).tasks.map(String)).not.toContain(String(importedTask._id));
+    // Removing it from the imported cluster must not delete the user's task.
+    expect(await Task.findOne({ _id: importedTask._id, userId: recipient._id })).not.toBeNull();
+  });
+
+  test("adding a deadline to the source cluster updates the broadcast and creates a recipient copy only after acceptance", async () => {
+    const addedSourceTask = await Task.create({
+      title: "New source deadline",
+      description: "Added after sharing",
+      deadline: "2026-12-15T00:00:00.000Z",
+      priority: "high",
+      deadlineType: "assignment",
+      reminderEnabled: false,
+      status: "pending",
+      userId: owner._id,
+    });
+
+    const response = await request(app)
+      .put(`/api/clusters/${sourceCluster._id}`)
+      .set("Cookie", authCookie(owner._id))
+      .send({ taskIds: [sourceTask._id.toString(), addedSourceTask._id.toString()] });
+
+    expect(response.statusCode).toBe(200);
+    const updatedBroadcast = await Broadcast.findById(broadcast._id);
+    expect(updatedBroadcast.tasks.map((task) => String(task.sourceTaskId))).toContain(String(addedSourceTask._id));
+
+    const inbox = await request(app)
+      .get("/api/managed-updates")
+      .set("Cookie", authCookie(recipient._id));
+    expect(inbox.statusCode).toBe(200);
+    expect(inbox.body.pendingCount).toBe(1);
+    const proposal = inbox.body.updates[0];
+    expect(proposal.targetType).toBe("membership");
+    expect(proposal.changes[0].proposedValue.action).toBe("add");
+    expect((await Cluster.findById(importedCluster._id)).tasks.map(String)).not.toContain(String(addedSourceTask._id));
+
+    const decision = await request(app)
+      .post(`/api/managed-updates/${proposal._id}/decide`)
+      .set("Cookie", authCookie(recipient._id))
+      .send({ decisions: [{ field: "membership", action: "accept" }] });
+    expect(decision.statusCode).toBe(200);
+
+    const updatedImport = await BroadcastImport.findById(importRecord._id);
+    const mapping = updatedImport.taskMappings.find((item) => String(item.sourceTaskId) === String(addedSourceTask._id));
+    expect(mapping).toBeTruthy();
+    const importedCopy = await Task.findOne({ _id: mapping.importedTaskId, userId: recipient._id });
+    expect(importedCopy).not.toBeNull();
+    expect(importedCopy.title).toBe("New source deadline");
+    expect(importedCopy.reminderEnabled).toBe(true); // recipient's import preference wins
+    expect(importedCopy.status).toBe("pending");
+    expect((await Cluster.findById(importedCluster._id)).tasks.map(String)).toContain(String(importedCopy._id));
+  });
+
+  test("deleting an owner deadline also removes it from source membership and proposes recipient cluster removal", async () => {
+    const response = await request(app)
+      .delete(`/api/tasks/${sourceTask._id}`)
+      .set("Cookie", authCookie(owner._id));
+
+    expect(response.statusCode).toBe(200);
+    expect(await Task.findById(sourceTask._id)).toBeNull();
+    expect((await Cluster.findById(sourceCluster._id)).tasks.map(String)).not.toContain(String(sourceTask._id));
+    expect((await Broadcast.findById(broadcast._id)).tasks.map((task) => String(task.sourceTaskId))).not.toContain(String(sourceTask._id));
+    expect(response.body.managedSyncSummary).toMatchObject({
+      sourceClustersFound: 1,
+      broadcastsFound: 1,
+      broadcastsUpdated: 1,
+      activeImportsFound: 1,
+      proposalsCreated: 1,
+      failedClusters: 0,
+    });
+
+    const inbox = await request(app)
+      .get("/api/managed-updates")
+      .set("Cookie", authCookie(recipient._id));
+    expect(inbox.statusCode).toBe(200);
+    expect(inbox.body.pendingCount).toBe(1);
+    const proposal = inbox.body.updates[0];
+    expect(proposal.targetType).toBe("membership");
+    expect(proposal.changes[0].proposedValue.action).toBe("remove");
+
+    const decision = await request(app)
+      .post(`/api/managed-updates/${proposal._id}/decide`)
+      .set("Cookie", authCookie(recipient._id))
+      .send({ decisions: [{ field: "membership", action: "accept" }] });
+    expect(decision.statusCode).toBe(200);
+    expect((await Cluster.findById(importedCluster._id)).tasks.map(String)).not.toContain(String(importedTask._id));
+    expect(await Task.findOne({ _id: importedTask._id, userId: recipient._id })).not.toBeNull();
+  });
+
   test("source-only deletion revokes broadcasts and preserves recipient copies", async () => {
     const response = await request(app)
       .delete(`/api/clusters/${sourceCluster._id}`)

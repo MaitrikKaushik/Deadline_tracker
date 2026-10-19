@@ -29,6 +29,22 @@ describe("Broadcasts page", () => {
     expect(screen.getByRole("link", { name: "Preview & Import" }).getAttribute("href")).toBe("#/broadcasts/A1B2C3D4E5");
   });
 
+
+  test("refreshes a share preview when the browser tab regains focus", async () => {
+    const { callsTo } = mockFetch({
+      "GET /api/broadcasts/A1B2C3D4E5": ok(broadcast),
+    });
+    render(<Broadcasts code="A1B2C3D4E5" onNotify={vi.fn()} onSessionExpired={vi.fn()} />);
+
+    await screen.findByText("Algorithms Exam");
+    const initialCalls = callsTo("GET", "/api/broadcasts/A1B2C3D4E5").length;
+    fireEvent(window, new Event("focus"));
+
+    await waitFor(() => {
+      expect(callsTo("GET", "/api/broadcasts/A1B2C3D4E5").length).toBeGreaterThan(initialCalls);
+    });
+  });
+
   test("previews selected deadlines and imports only the checked tasks", async () => {
     const { calls } = mockFetch({
       "GET /api/broadcasts/A1B2C3D4E5": ok(broadcast),

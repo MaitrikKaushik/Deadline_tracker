@@ -51,6 +51,22 @@ describe("Managed updates inbox", () => {
     confirm.mockRestore();
   });
 
+
+  test("refreshes the inbox when the browser tab regains focus", async () => {
+    const { callsTo } = mockFetch({
+      "GET /api/managed-updates": ok({ updates: [proposal], pendingCount: 1, connections: [] }),
+    });
+    render(<ManagedUpdates {...handlers()} />);
+
+    await screen.findByRole("heading", { name: "Algorithms Exam" });
+    const initialCalls = callsTo("GET", "/api/managed-updates").length;
+    fireEvent(window, new Event("focus"));
+
+    await waitFor(() => {
+      expect(callsTo("GET", "/api/managed-updates").length).toBeGreaterThan(initialCalls);
+    });
+  });
+
   test("shows source changes and sends independent accept/reject choices", async () => {
     let pending = true;
     const { callsTo } = mockFetch({

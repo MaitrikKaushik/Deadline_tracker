@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const Broadcast = require("../models/broadcast");
 const BroadcastImport = require("../models/broadcastImport");
 const Cluster = require("../models/cluster");
 const ManagedUpdate = require("../models/managedUpdate");
@@ -25,10 +26,20 @@ const labelForField = (field) => ({
   deadlineType: "Deadline type",
   referenceLink: "Reference link",
   name: "Cluster name",
+  membership: "Cluster deadline membership",
 }[field] || field.charAt(0).toUpperCase() + field.slice(1));
 
 const renderValue = (field, value) => {
   if (field === "reminderEnabled") return value ? "Enabled" : "Disabled";
+  if (field === "membership") {
+    if (typeof value === "boolean") return value ? "Included in your imported cluster" : "Not in your imported cluster";
+    if (value && typeof value === "object") {
+      const title = value.title || "deadline";
+      return value.action === "add"
+        ? `Add “${title}” to your imported cluster`
+        : `Remove “${title}” from your imported cluster`;
+    }
+  }
   if (field === "deadline" && value) {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
@@ -69,7 +80,10 @@ exports.listManagedUpdates = async (req, res) => {
       }));
 
     const taskIds = updates.map((update) => update.importedTaskId).filter(Boolean);
-    const clusterIds = updates.map((update) => update.importedClusterId).filter(Boolean);
+    const clusterIds = updates
+      .filter((update) => update.targetType === "cluster" || update.targetType === "membership")
+      .map((update) => update.importedClusterId)
+      .filter(Boolean);
     const [tasks, clusters] = await Promise.all([
       Task.find({ _id: { $in: taskIds }, userId: req.user._id }).select("title"),
       Cluster.find({ _id: { $in: clusterIds }, ownerId: req.user._id, origin: "imported" }).select("name"),
@@ -79,12 +93,14 @@ exports.listManagedUpdates = async (req, res) => {
 
     const shaped = updates.map((update) => ({
       ...update,
-      itemTitle: update.targetType === "cluster"
+      itemTitle: update.targetType === "cluster" || update.targetType === "membership"
         ? clusterNames.get(String(update.importedClusterId)) || "Imported cluster"
         : taskNames.get(String(update.importedTaskId)) || "Imported deadline",
       changes: (update.changes || []).filter((change) => change.status === "pending").map((change) => ({
         ...change,
-        label: labelForField(change.field),
+        label: change.field === "membership"
+          ? `${change.proposedValue?.action === "add" ? "Add deadline" : "Remove deadline"}: ${change.proposedValue?.title || "Shared deadline"}`
+          : labelForField(change.field),
         previousDisplay: renderValue(change.field, change.previousValue),
         proposedDisplay: renderValue(change.field, change.proposedValue),
       })),
@@ -127,7 +143,8 @@ exports.decideManagedUpdate = async (req, res) => {
     });
     if (!importRecord) return res.status(410).json({ message: "The imported copy is no longer available" });
 
-    const target = update.targetType === "cluster"
+    const isMembershipUpdate = update.targetType === "membership";
+    const target = update.targetType === "cluster" || isMembershipUpdate
       ? await Cluster.findOne({ _id: update.importedClusterId, ownerId: req.user._id, origin: "imported" })
       : await Task.findOne({ _id: update.importedTaskId, userId: req.user._id });
 
@@ -146,27 +163,52 @@ exports.decideManagedUpdate = async (req, res) => {
     const pendingChanges = update.changes.filter((change) => change.status === "pending");
     const decisionMap = new Map(decisions.map((decision) => [decision.field, decision.action]));
     const applicable = [];
+    const applicableMembership = [];
 
     const staleAcceptedFields = [];
     for (const [field, action] of decisionMap) {
       const change = pendingChanges.find((candidate) => candidate.field === field);
       if (!change) return res.status(400).json({ message: `Field ${field} is not pending on this update` });
-      if (action === "accept") {
-        if (update.targetType === "task" && !ACCEPTABLE_TASK_FIELDS.has(field)) {
-          return res.status(400).json({ message: `Field ${field} cannot be imported` });
+      if (action !== "accept") continue;
+
+      if (isMembershipUpdate) {
+        if (field !== "membership" || !["add", "remove"].includes(change.proposedValue?.action)) {
+          return res.status(400).json({ message: "Invalid cluster membership proposal" });
         }
-        if (update.targetType === "cluster" && field !== "name") {
-          return res.status(400).json({ message: `Field ${field} cannot be imported into a cluster` });
-        }
-        if (!sameValue(target[field], change.previousValue)) {
-          // The recipient changed this field after the proposal was created.
-          // Refresh the displayed baseline and make them decide again instead
-          // of overwriting a newer personal change with a stale approval.
-          change.previousValue = target[field];
+        const mapping = (importRecord.taskMappings || []).find(
+          (item) => String(item.sourceTaskId) === String(update.sourceTaskId)
+        );
+        const mappedTaskId = mapping?.importedTaskId;
+        const currentlyIncluded = Boolean(mappedTaskId && (target.tasks || []).some(
+          (taskId) => String(taskId) === String(mappedTaskId)
+        ));
+        if (!sameValue(currentlyIncluded, change.previousValue)) {
+          change.previousValue = currentlyIncluded;
           staleAcceptedFields.push(field);
         } else {
-          applicable.push({ field, value: change.proposedValue });
+          applicableMembership.push({
+            action: change.proposedValue.action,
+            sourceTaskId: update.sourceTaskId,
+            title: change.proposedValue.title || "Shared deadline",
+          });
         }
+        continue;
+      }
+
+      if (update.targetType === "task" && !ACCEPTABLE_TASK_FIELDS.has(field)) {
+        return res.status(400).json({ message: `Field ${field} cannot be imported` });
+      }
+      if (update.targetType === "cluster" && field !== "name") {
+        return res.status(400).json({ message: `Field ${field} cannot be imported into a cluster` });
+      }
+      if (!sameValue(target[field], change.previousValue)) {
+        // The recipient changed this field after the proposal was created.
+        // Refresh the displayed baseline and make them decide again instead
+        // of overwriting a newer personal change with a stale approval.
+        change.previousValue = target[field];
+        staleAcceptedFields.push(field);
+      } else {
+        applicable.push({ field, value: change.proposedValue });
       }
     }
 
@@ -189,6 +231,101 @@ exports.decideManagedUpdate = async (req, res) => {
           taskId: target._id,
           status: { $ne: "sent" },
         });
+      }
+    }
+
+    for (const membershipChange of applicableMembership) {
+      const sourceTaskId = membershipChange.sourceTaskId;
+      const currentSourceCluster = await Cluster.findOne({
+        _id: update.sourceClusterId,
+        ownerId: update.ownerId,
+        origin: "created",
+      }).select("_id tasks");
+      const sourceStillIncludesTask = Boolean(currentSourceCluster &&
+        (currentSourceCluster.tasks || []).some((taskId) => String(taskId) === String(sourceTaskId)));
+
+      if (membershipChange.action === "add") {
+        // Re-check the source immediately before creating the recipient copy;
+        // an old proposal must not re-add a deadline the owner has since removed.
+        if (!sourceStillIncludesTask) {
+          return res.status(409).json({
+            message: "The owner has since removed this deadline from the source cluster. Refresh pending updates before deciding.",
+          });
+        }
+
+        const broadcast = await Broadcast.findOne({
+          _id: update.broadcastId,
+          ownerId: update.ownerId,
+        });
+        const sourceTask = await Task.findOne({ _id: sourceTaskId, userId: update.ownerId });
+        const snapshot = broadcast?.tasks?.find(
+          (task) => String(task.sourceTaskId) === String(sourceTaskId)
+        );
+        if (!broadcast || !sourceTask || !snapshot) {
+          return res.status(409).json({
+            message: "The source deadline is no longer available. Refresh pending updates before deciding.",
+          });
+        }
+
+        let mapping = (importRecord.taskMappings || []).find(
+          (item) => String(item.sourceTaskId) === String(sourceTaskId)
+        );
+        let importedCopy = mapping
+          ? await Task.findOne({ _id: mapping.importedTaskId, userId: req.user._id })
+          : null;
+
+        if (!importedCopy) {
+          const newImportedId = mapping?.importedTaskId || new mongoose.Types.ObjectId();
+          importedCopy = await Task.create({
+            _id: newImportedId,
+            title: snapshot.title,
+            description: snapshot.description || "",
+            deadline: snapshot.deadline,
+            priority: snapshot.priority || "medium",
+            status: "pending",
+            deadlineType: snapshot.deadlineType || "general",
+            referenceLink: snapshot.referenceLink || "",
+            // The recipient's import preference, not the owner's reminder
+            // value, governs newly copied deadlines.
+            reminderEnabled: Boolean(importRecord.reminderEnabled),
+            userId: req.user._id,
+          });
+        }
+
+        if (!mapping) {
+          importRecord.taskMappings.push({
+            sourceTaskId,
+            importedTaskId: importedCopy._id,
+          });
+          mapping = importRecord.taskMappings[importRecord.taskMappings.length - 1];
+        } else {
+          mapping.importedTaskId = importedCopy._id;
+        }
+        if (!(importRecord.importedTaskIds || []).some((taskId) => String(taskId) === String(importedCopy._id))) {
+          importRecord.importedTaskIds.push(importedCopy._id);
+        }
+        if (!(importRecord.selectedSourceTaskIds || []).some((taskId) => String(taskId) === String(sourceTaskId))) {
+          importRecord.selectedSourceTaskIds.push(sourceTaskId);
+        }
+        if (!(target.tasks || []).some((taskId) => String(taskId) === String(importedCopy._id))) {
+          target.tasks.push(importedCopy._id);
+          await target.save();
+        }
+        update.importedTaskId = importedCopy._id;
+        await importRecord.save();
+      } else {
+        const mapping = (importRecord.taskMappings || []).find(
+          (item) => String(item.sourceTaskId) === String(sourceTaskId)
+        );
+        if (mapping) {
+          const beforeCount = (target.tasks || []).length;
+          target.tasks = (target.tasks || []).filter(
+            (taskId) => String(taskId) !== String(mapping.importedTaskId)
+          );
+          if ((target.tasks || []).length !== beforeCount) await target.save();
+          // Do not delete the recipient's Task document: it may be used by
+          // personal views or another cluster.
+        }
       }
     }
 

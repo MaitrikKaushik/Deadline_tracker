@@ -244,6 +244,17 @@ function App() {
           (task) => task._id !== taskId
         )
       );
+
+      if (data.managedUpdateWarning) {
+        notify(data.managedUpdateWarning);
+      } else if (data.managedSyncSummary?.sourceClustersFound > 0) {
+        const summary = data.managedSyncSummary;
+        if (summary.broadcastsFound === 0) {
+          notify("Deadline deleted, but no share link was found for its source cluster. No recipient update could be prepared.");
+        } else {
+          notify(`Deadline deleted. Updated ${summary.broadcastsUpdated} shared broadcast${summary.broadcastsUpdated === 1 ? "" : "s"} and prepared ${summary.proposalsCreated} recipient update proposal${summary.proposalsCreated === 1 ? "" : "s"}.`);
+        }
+      }
     } catch (error) {
       console.error("Delete task error:", error);
 

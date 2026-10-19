@@ -31,10 +31,11 @@ function ManagedUpdates({ onNotify, onSessionExpired }) {
   const [actionError, setActionError] = useState({});
   const [disconnectedImports, setDisconnectedImports] = useState(new Set());
 
-  const loadUpdates = useCallback(async ({ signal } = {}) => {
-    setLoading(true);
-    setLoadError("");
-    setChoices({});
+  const loadUpdates = useCallback(async ({ signal, silent = false } = {}) => {
+    if (!silent) {
+      setLoading(true);
+      setLoadError("");
+    }
     try {
       const result = await getManagedUpdates({ signal });
       setUpdates(Array.isArray(result?.updates) ? result.updates : []);
@@ -44,9 +45,11 @@ function ManagedUpdates({ onNotify, onSessionExpired }) {
         onSessionExpired();
         return;
       }
-      if (error?.name !== "AbortError") setLoadError(error.message || "Unable to load updates.");
+      if (error?.name !== "AbortError" && !silent) {
+        setLoadError(error.message || "Unable to load updates.");
+      }
     } finally {
-      if (!signal?.aborted) setLoading(false);
+      if (!signal?.aborted && !silent) setLoading(false);
     }
   }, [onSessionExpired]);
 
@@ -54,6 +57,31 @@ function ManagedUpdates({ onNotify, onSessionExpired }) {
     const controller = new AbortController();
     loadUpdates({ signal: controller.signal });
     return () => controller.abort();
+  }, [loadUpdates]);
+
+  // Source owners may make changes in a separate session while this inbox is
+  // open. Refresh silently on focus/visibility and periodically while visible,
+  // so proposals arrive without requiring a manual page reload. Existing user
+  // decisions are preserved during background refreshes.
+  useEffect(() => {
+    let controller = null;
+    const refreshWhenVisible = () => {
+      if (document.hidden) return;
+      if (controller) controller.abort();
+      controller = new AbortController();
+      loadUpdates({ signal: controller.signal, silent: true });
+    };
+
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    const intervalId = window.setInterval(refreshWhenVisible, 20000);
+
+    return () => {
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.clearInterval(intervalId);
+      if (controller) controller.abort();
+    };
   }, [loadUpdates]);
 
   const setChoice = (updateId, field, action) => {
@@ -139,7 +167,7 @@ function ManagedUpdates({ onNotify, onSessionExpired }) {
           <p className="eyebrow eyebrow-dark">SOURCE CHANGES</p>
           <h2>Pending Updates</h2>
           <p className="managed-updates-intro">
-            Owners can propose changes to shared deadlines. Nothing is applied to your copy until you accept it.
+            Owners can propose changes to shared deadlines and cluster membership. Nothing is applied to your copy until you accept it.
             Your completion status stays yours; email reminder changes are always presented for your approval.
           </p>
         </div>
@@ -164,7 +192,7 @@ function ManagedUpdates({ onNotify, onSessionExpired }) {
         <div className="empty-state">
           <div className="empty-icon">✓</div>
           <h3>You're up to date</h3>
-          <p>When an owner changes a shared deadline or cluster name, the proposed changes will appear here. You decide what to import.</p>
+          <p>When an owner changes a shared deadline, adds or removes deadlines from a shared cluster, or renames the cluster, the proposed changes will appear here. You decide what to import.</p>
         </div>
       )}
 
@@ -207,7 +235,7 @@ function ManagedUpdates({ onNotify, onSessionExpired }) {
               <article className="managed-update-card" key={update._id}>
                 <div className="managed-update-heading">
                   <div>
-                    <p className="eyebrow eyebrow-dark">{update.targetType === "cluster" ? "CLUSTER UPDATE" : "DEADLINE UPDATE"}</p>
+                    <p className="eyebrow eyebrow-dark">{update.targetType === "cluster" ? "CLUSTER UPDATE" : update.targetType === "membership" ? "CLUSTER CONTENT UPDATE" : "DEADLINE UPDATE"}</p>
                     <h3>{update.itemTitle || "Shared item"}</h3>
                     <p className="managed-update-source">
                       Proposed by <strong>{update.ownerId?.name || "the source owner"}</strong> · Source: <strong>{update.broadcastId?.name || "Shared cluster"}</strong>

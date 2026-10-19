@@ -13,6 +13,7 @@ const managedUpdateChangeSchema = new mongoose.Schema(
         "deadlineType",
         "referenceLink",
         "name",
+        "membership",
       ],
       required: true,
     },
@@ -20,7 +21,7 @@ const managedUpdateChangeSchema = new mongoose.Schema(
     proposedValue: { type: mongoose.Schema.Types.Mixed, default: null },
     status: {
       type: String,
-      enum: ["pending", "accepted", "rejected"],
+      enum: ["pending", "accepted", "rejected", "superseded"],
       default: "pending",
     },
     decidedAt: { type: Date, default: null },
@@ -60,7 +61,7 @@ const managedUpdateSchema = new mongoose.Schema(
     },
     targetType: {
       type: String,
-      enum: ["task", "cluster"],
+      enum: ["task", "cluster", "membership"],
       default: "task",
       required: true,
     },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useAsyncData from "../hooks/useAsyncData";
 import { getBroadcast, getBroadcasts, getMyBroadcasts, importBroadcast, isUnauthorized, revokeBroadcast } from "../services/api";
 import { clusterPath, countLabel, formatDate, navigate } from "../utils/clusterUtils";
@@ -23,6 +23,26 @@ function Broadcasts({ code, canImport = true, onRequestLogin, onNotify, onSessio
     code ? `preview:${code}` : view === "mine" ? "mine" : `search:${query}`,
     { onUnauthorized: onSessionExpired }
   );
+
+  // Broadcast snapshots are refreshed by the backend when the source owner
+  // changes cluster membership or shared task fields. Refresh this view while
+  // it is visible and whenever the browser/tab regains focus so existing pages
+  // do not keep displaying an old snapshot indefinitely.
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (!document.hidden) reload();
+    };
+
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    const intervalId = window.setInterval(refreshWhenVisible, 30000);
+
+    return () => {
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.clearInterval(intervalId);
+    };
+  }, [reload]);
 
   const handleRevoke = async (broadcast) => {
     if (!broadcast || broadcast.revokedAt || revokingId) return;

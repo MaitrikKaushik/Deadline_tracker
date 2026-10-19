@@ -6,7 +6,10 @@ const Broadcast = require("../models/broadcast");
 const BroadcastImport = require("../models/broadcastImport");
 const ManagedUpdate = require("../models/managedUpdate");
 const ReminderDelivery = require("../models/reminderDelivery");
-const { recordClusterNameChange } = require("../services/managedUpdateService");
+const {
+  recordClusterNameChange,
+  recordClusterMembershipChanges,
+} = require("../services/managedUpdateService");
 
 const MAX_NAME_LENGTH = 100;
 const VALID_TYPES = ["mine", "imported", "all"];
@@ -192,6 +195,7 @@ exports.updateCluster = async (req, res) => {
     }
 
     const previousName = cluster.name;
+    const previousTaskIds = (cluster.tasks || []).map((taskId) => String(taskId));
 
     if (name !== undefined) {
       const nameResult = validateName(name);
@@ -217,7 +221,14 @@ exports.updateCluster = async (req, res) => {
 
     await cluster.save();
 
-    let managedUpdateWarning;
+    const currentTaskIds = (cluster.tasks || []).map((taskId) => String(taskId));
+    const previousTaskSet = new Set(previousTaskIds);
+    const currentTaskSet = new Set(currentTaskIds);
+    const membershipChanged = previousTaskIds.length !== currentTaskIds.length ||
+      [...previousTaskSet].some((taskId) => !currentTaskSet.has(taskId));
+    const managedUpdateWarnings = [];
+    let managedSyncSummary = null;
+
     if (previousName !== cluster.name) {
       try {
         await recordClusterNameChange({
@@ -226,14 +237,33 @@ exports.updateCluster = async (req, res) => {
           newName: cluster.name,
         });
       } catch (syncError) {
-        console.error("Managed cluster update preparation failed:", syncError);
-        managedUpdateWarning = "The cluster was saved, but shared update proposals could not all be prepared.";
+        console.error("Managed cluster rename preparation failed:", syncError);
+        managedUpdateWarnings.push("The cluster name was saved, but shared rename proposals could not all be prepared.");
+      }
+    }
+
+    if (membershipChanged) {
+      try {
+        const syncResult = await recordClusterMembershipChanges({
+          ownerId: req.user._id,
+          sourceClusterId: cluster._id,
+          previousTaskIds,
+          currentTaskIds,
+        });
+        managedSyncSummary = {
+          reason: "cluster-membership-change",
+          ...syncResult,
+        };
+      } catch (syncError) {
+        console.error("Managed cluster membership synchronization failed:", syncError);
+        managedUpdateWarnings.push("The cluster was saved, but shared deadline additions/removals could not all be prepared.");
       }
     }
 
     await cluster.populate("tasks");
     const result = cluster.toObject();
-    if (managedUpdateWarning) result.managedUpdateWarning = managedUpdateWarning;
+    if (managedSyncSummary) result.managedSyncSummary = managedSyncSummary;
+    if (managedUpdateWarnings.length) result.managedUpdateWarning = managedUpdateWarnings.join(" ");
     res.json(result);
   } catch (error) {
     handleError(res, error, "Failed to update cluster");
